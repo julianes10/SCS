@@ -1,0 +1,14 @@
+[Unit]
+Description=JSON/WEB REST server as agent to serial arduino device
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/opt/PROJECT_NAME/piInoAgent/piInoAgent.py --configfile /etc/piInoAgent.conf
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+
