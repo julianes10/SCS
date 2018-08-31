@@ -1,0 +1,6 @@
+[submodule "arduino/FastLed"]
+	path = arduino/FastLed
+	url = https://github.com/FastLED/FastLED.git
+[submodule "arduino/SimpleTimer"]
+	path = arduino/SimpleTimer
+	url = https://github.com/schinken/SimpleTimer.git
