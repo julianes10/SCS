@@ -1,0 +1,14 @@
+[Unit]
+Description=Simple DHT tracker
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/opt/PROJECT_NAME/simpleDHTtracker/simpleDHTtracker.py --configfile /etc/simpleDHTtracker.conf
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+
