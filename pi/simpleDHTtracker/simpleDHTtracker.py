@@ -37,19 +37,24 @@ def get_dht_status():
     return rt
 
 @api.route('/api/v1.0/dht/sensors/now', methods=['GET'])
-def get_dht_sensors():
+def get_dht_sensors_now():
     helper.internalLogger.debug("now sensors data required")
-    data=[]
+    info=[]
 
     for x in dhtList:
         helper.internalLogger.debug('Reading DHT "{0}" on pin "{1}"...'.format(x["name"],x["pin"]))
-        h, t = getSensorData(pin = x["pin"]) 
+        h, t = getSensorData(x["pin"], x["model"] ) 
         if h is not None and t is not None:
-          data.append({'name': x["name"],'temperature':h,'humidity':t})
+          info.append({'name': x["name"],'temperature':t,'humidity':h})
         else:
           helper.internalLogger.debug('Error reading DHT "{0}" on pin "{1}"...'.format(x["name"],x["pin"]))
 
-    return json.dumps(data)
+    return json.dumps(info)
+
+@api.route('/api/v1.0/dht/sensors/latest', methods=['GET'])
+def get_dht_sensors_latest():
+    helper.internalLogger.debug("latest cached sensors data required")
+    return json.dumps(latestCached)
 
 
 '''----------------------------------------------------------'''
@@ -58,15 +63,15 @@ def getSensorData(pin,model=22):
 
    if amIaPi():
       import Adafruit_DHT
-      if model == 21:  
+      if model == 11:  
         sensor = Adafruit_DHT.DHT11
-      else
+      else:
         sensor = Adafruit_DHT.DHT22
       humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
    else:
       humidity=randint(0, 200)/2.0
       temperature=randint(-10, 100)/2.0
-   return (temperature,humidity)
+   return (humidity,temperature)
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
@@ -117,15 +122,19 @@ def main(configfile):
      loggingEnd()
      return
 
-
     #Get log names
-    global dhtList;
+    global dhtList
     dhtList=configuration["DHT"];
+
 
     
     apiRestTask=threading.Thread(target=apirest_task,name="restapi")
     apiRestTask.daemon = True
     apiRestTask.start()
+
+
+    global latestCached
+    latestCached=[]
 
   except Exception as e:
     helper.internalLogger.critical("Error processing configuration json {0} file. Exiting".format(configfile))
@@ -148,7 +157,7 @@ def main(configfile):
      while True:
       for x in dhtList:
         helper.internalLogger.debug('Reading DHT "{0}" on pin "{1}"...'.format(x["name"],x["pin"]))
-        h, t = getSensorData(pin = x["pin"]) 
+        h, t = getSensorData(x["pin"],x["model"]) 
         if h is not None and t is not None:
 
          with open(x["output"]+".t", "a") as myfile:
@@ -157,6 +166,7 @@ def main(configfile):
          with open(x["output"]+".h", "a") as myfile:
           myfile.write(str(round(h,1))+" ")      
           myfile.close()
+        latestCached.append({'name': x["name"],'temperature':t,'humidity':h})
         time.sleep(configuration["interval"]) 
 
 
