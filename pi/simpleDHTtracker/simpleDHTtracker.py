@@ -54,11 +54,14 @@ def get_dht_sensors():
 
 '''----------------------------------------------------------'''
 '''----------------       getSensorData   -------------------'''
-def getSensorData(pin):
+def getSensorData(pin,model=22):
 
    if amIaPi():
       import Adafruit_DHT
-      sensor = Adafruit_DHT.DHT22
+      if model == 21:  
+        sensor = Adafruit_DHT.DHT11
+      else
+        sensor = Adafruit_DHT.DHT22
       humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
    else:
       humidity=randint(0, 200)/2.0
@@ -95,12 +98,31 @@ def main(configfile):
 
   try:
 
+    if  args.scan:
+     for x in range(1, 41):
+      print('Scanning DHT 22 PIN {0}...'.format(x))
+      h,t = getSensorData(x) 
+      if h is not None and t is not None:
+        print('  PIN {0} Temp={1:0.1f} Celsius  Humidity={2:0.1f}%'.format(x,t,h))
+      else:
+        print('  Failed to get DHT data')
+      print('Scanning DHT 11 PIN {0}...'.format(x))
+
+      h,t = getSensorData(x,11) 
+      if h is not None and t is not None:
+        print('  PIN {0} Temp={1:0.1f} Celsius  Humidity={2:0.1f}%'.format(x,t,h))
+      else:
+        print('  Failed to get DHT data')
+
+     loggingEnd()
+     return
+
 
     #Get log names
     global dhtList;
     dhtList=configuration["DHT"];
 
-
+    
     apiRestTask=threading.Thread(target=apirest_task,name="restapi")
     apiRestTask.daemon = True
     apiRestTask.start()
@@ -112,18 +134,6 @@ def main(configfile):
     return  
 
   try:    
-
- 
-   if  args.scan:
-     for x in range(1, 41):
-      print('Scanning PIN {0}...'.format(x))
-      h,t = getSensorData(x) 
-      if h is not None and t is not None:
-        print('  PIN {0} Temp={1:0.1f} Celsius  Humidity={2:0.1f}%'.format(x,t,h))
-      else:
-        print('  Failed to get DHT data')
-     loggingEnd()
-   else:
      import time
      ts = time.time()
      st = datetime.datetime.fromtimestamp(ts).strftime('%d-%m-%Y %H:%M:%S')

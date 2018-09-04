@@ -3,7 +3,7 @@
            "logExceptions":"/tmp/simpleDHTtrackere.log"
   },
   "DHT": [ 
-      { "name": "Comedor", "pin":16 ,"output":"/tmp/dht"}
+      { "name": "Comedor", "pin":16 ,"output":"/tmp/dht", "model"=22}
    ],
   "interval":10
   
