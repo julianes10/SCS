@@ -71,7 +71,7 @@ def getSensorData(pin,model=22):
    else:
       humidity=randint(0, 200)/2.0
       temperature=randint(-10, 100)/2.0
-   return (humidity,temperature)
+   return (round(humidity,1),round(temperature,1))
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
@@ -161,10 +161,10 @@ def main(configfile):
         if h is not None and t is not None:
 
          with open(x["output"]+".t", "a") as myfile:
-          myfile.write(str(round(t,1))+" ")      
+          myfile.write(str(t)+" ")      
           myfile.close()
          with open(x["output"]+".h", "a") as myfile:
-          myfile.write(str(round(h,1))+" ")      
+          myfile.write(str(h)+" ")      
           myfile.close()
         latestCached.append({'name': x["name"],'temperature':t,'humidity':h})
         time.sleep(configuration["interval"]) 
