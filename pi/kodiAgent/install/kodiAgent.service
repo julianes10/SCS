@@ -1,0 +1,14 @@
+[Unit]
+Description=Simple kodi agent monitor
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/opt/PROJECT_NAME/kodiAgent/kodiAgent.py --configfile /etc/kodiAgent.conf
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+

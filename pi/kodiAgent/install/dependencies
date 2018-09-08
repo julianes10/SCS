@@ -1,0 +1,6 @@
+sudo apt-get update
+sudo apt-get install python-setuptools python-dev build-essential
+sudo apt-get install python-pip
+sudo pip install flask
+sudo pip install kodi-json
+

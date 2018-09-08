@@ -1,0 +1,6 @@
+{
+  "log": { "logTraces":"/tmp/kodiAgent.log",
+           "logExceptions":"/tmp/kodiAgente.log"
+  },
+  "kodi" : {"url":"http://pi32:8081/jsonrpc"}
+}
