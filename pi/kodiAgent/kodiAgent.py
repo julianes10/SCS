@@ -32,20 +32,38 @@ api = Flask("api")
 @api.route('/api/v1.0/kodi/status', methods=['GET'])
 def get_kodi_status():
   helper.internalLogger.debug("status required")
+  rt = {}
   try:
       aux=kodi.JSONRPC.Ping()
+      helper.internalLogger.debug("Ping: {0}".format(aux))      
       if aux['result'] == "pong":
-        rt=jsonify({'result': 'OK'})
+        rt['result']='OK'
         helper.internalLogger.debug("status OK")
+        aux=kodi.Player.GetActivePlayers()
+        helper.internalLogger.debug("GetActivePlayers: {0}".format(aux))
+        ''' TODO ONLY CONSIDER FIRST ITEM IN PLAYERS LIST '''
+        if not aux['result']:
+          helper.internalLogger.debug("Video Off")
+          rt['play']=False
+        else:
+          rt['play']=True
+          pid=aux['result'][0]['playerid']
+          helper.internalLogger.debug("Player Id:{0}".format(pid))
+          aux=kodi.Player.GetItem({"properties": ["title"], "playerid": pid })
+          helper.internalLogger.debug("Video On Player {0}: {1}".format(1,aux))
+          title=aux['result']['item']['title']
+          label=aux['result']['item']['label']
+          rt['title']=title+"-"+label
+      rtjson=json.dumps(rt)
 
   except Exception as e:
     e = sys.exc_info()[0]
     helper.internalLogger.error('Error: kodi seems not be ready to ping')
     helper.einternalLogger.exception(e)  
-    rt=jsonify({'result': 'KO'})
+    rtjson=jsonify({'result': 'KO'})
     helper.internalLogger.debug("status failed")
 
-  return rt
+  return rtjson
 
 
 '''----------------------------------------------------------'''
