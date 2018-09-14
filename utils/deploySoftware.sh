@@ -87,7 +87,25 @@ if [ "$arg_dest" == "remote" ]; then
     fi
     DEPLOY_ARDUINO=""
     if [ $deployArduino -eq 1 ]; then
-       DEPLOY_ARDUINO="cd $DEPLOY_FOLDER/install && sudo ./deployArduino.sh;"
+       ## Compile localy
+       pushd ./arduino
+       make
+       retval=$?
+       popd
+       if [ $retval -ne 0 ]; then
+         echo "ERROR COMPILING ARDUINO FILE"
+         exit 1
+       fi 
+       ## Get basic info
+       A_BOARD=`awk '/BOARD_TAG/ {print $3}' ./arduino/Makefile`
+       A_BAUD=`awk '/AVRDUDE_ARD_BAUDRATE/ {print $3}' ./arduino/Makefile`
+       A_HEXPATH="./build-$A_BOARD/arduino.hex"
+       A_TTY=`awk '/ARDUINO_PORT/ {print $3}' ./arduino/Makefile`
+       echo "### GOT ARDUINO PARAMS: $A_BAUD - $A_HEXPATH - $A_TTY"
+       ## COPY .hex and settings for avrdude
+       scp -P $PI_PORT ./arduino/$A_HEXPATH $PI_USER@$PI_IPNAME:$TMP_DEPLOY
+       ## Prepare for deploy .hex and settings for avrdude
+       DEPLOY_ARDUINO="avrdude -q -V -D -p atmega328p -c arduino -b $A_BAUD -P $A_TTY Makefile Makefile -U flash:w:$DEPLOY_FOLDER/arduino.hex:i;"
     fi
 
     DEPLOY_SERVICE=""

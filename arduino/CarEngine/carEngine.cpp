@@ -84,8 +84,12 @@ void CarEngine::_slightRight()
 //------------------------------------------------
 void CarEngine::_uTurn()
 {
+  uint8_t bk=_speed;
+  _setSpeed(180);
   _doLeft();
-  delay(400);
+  delay(1000);
+  _setSpeed(bk);
+
 }
 
 //------------------------------------------------

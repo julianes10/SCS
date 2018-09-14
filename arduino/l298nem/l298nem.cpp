@@ -34,7 +34,7 @@ L298NEM::L298NEM(uint8_t ena,uint8_t in1,uint8_t in2,uint8_t enb,uint8_t in3,uin
   pinMode (_IN4, OUTPUT);
 }
 //------------------------------------------------
-void L298NEM::forward ()
+void L298NEM::backward ()
 {
   //Direccion motor A
   digitalWrite (_IN1, LOW);
@@ -47,7 +47,7 @@ void L298NEM::forward ()
 
 }
 //------------------------------------------------
-void L298NEM::backward ()
+void L298NEM::forward ()
 {
   //Direccion motor A
   digitalWrite (_IN1, HIGH);
@@ -101,6 +101,7 @@ uint8_t L298NEM::speed (uint8_t s)
   analogWrite (_ENA, s); 
   analogWrite (_ENB, s); 
   _speed=s;
+  _speedTurn = s; //TODO not sure fixed speed on turn helps
   return _speed;
 }
 
