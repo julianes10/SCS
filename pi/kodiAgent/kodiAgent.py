@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import argparse
 import time
 import datetime
@@ -108,7 +108,8 @@ def fullMatch(listOfkeys,target):
  for x in listOfkeys:
    #helper.internalLogger.debug("Trying to match'{0}' and '{1}'".format(target,x))
    #simple word base match 
-   if x.lower() in target.lower() :
+   #if x.lower() in target.lower() :
+   if x in target:
    #m = re.search(x,target)
    #if m:
      matchedItems=matchedItems+1
@@ -138,8 +139,8 @@ def amIwatchingIt(c):
    pid=aux['result'][0]['playerid']
    #helper.internalLogger.debug("Player Id:{0}".format(pid))
    aux=kodi.Player.GetItem({"properties": ["title"], "playerid": pid })
-   title=aux['result']['item']['title']
-   label=aux['result']['item']['label']
+   title=(aux['result']['item']['title'])
+   label=(aux['result']['item']['label'])
    #Try to match keystrings on it title
    if "keystrings" in c:
      if fullMatch(c["keystrings"],title) or fullMatch(c["keystrings"],label):
@@ -151,6 +152,41 @@ def amIwatchingIt(c):
     helper.einternalLogger.exception(e)  
 
  return rt
+
+
+'''----------------------------------------------------------'''
+'''----------------       searchAndPlayContent        -------------------'''
+'''----------------------------------------------------------'''
+def searchAndPlayContent(c,config):
+ rt=False
+ if not "keystrings" in c:
+   return False
+
+ try:
+  params={"properties":["title"],
+          "media":"video",
+          "sort": { "method":"label","order":"ascending"},
+          "directory": config["addon"]["magic-url"]
+          }
+  ## helper.internalLogger.debug('Quering : {0}'.format(params))
+  aux=kodi.Files.GetDirectory(params)
+
+  ## helper.internalLogger.debug('Events NOW: {0}'.format(aux))
+  for event in aux["result"]["files"]:
+    #Try to match keystrings on it title
+    if "keystrings" in c:
+     if fullMatch(c["keystrings"],event["label"]) or fullMatch(c["keystrings"],event["title"]):
+       helper.internalLogger.debug('Event to play: {0} file {1}'.format(event["title"],event["title"]))
+       return True
+     
+ except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.error('Error: something goes bad trying search or play event')
+    helper.einternalLogger.exception(e)  
+
+ helper.internalLogger.debug('Not matching any event')
+ return rt
+
 
 '''----------------------------------------------------------'''
 '''----------------       pollAutoTracker        -------------------'''
@@ -170,16 +206,9 @@ def pollAutoTracker(config):
     return
   for c in what["content"]:
     helper.internalLogger.debug("Tracker: Checking status of content".format(c))
-    amIwatchingIt(c)
-    '''am i watching it
-    ok
-    else
-    have i the tracker list
-      try gather one /in ordered list
-    else
-      get the list livetv now
-      filter by STRING
-      get tracket list'''
+    if not amIwatchingIt(c):
+      if searchAndPlayContent(c,config):
+        return  ### NOTE it breaks so it is like a prio list...
 
 
 '''----------------------------------------------------------'''
