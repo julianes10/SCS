@@ -11,6 +11,9 @@ import threading
 import helper
 from random import randint
 from kodijson import Kodi, PLAYER_VIDEO
+import re
+
+
 
 
 #Code copy and adapted from https://github.com/adafruit/Adafruit_Python_DHT/blob/master/examples/simpletest.py
@@ -34,9 +37,7 @@ def get_kodi_status():
   helper.internalLogger.debug("status required")
   rt = {}
   try:
-      aux=kodi.JSONRPC.Ping()
-      helper.internalLogger.debug("Ping: {0}".format(aux))      
-      if aux['result'] == "pong":
+      if kodiAlive():
         rt['result']='OK'
         helper.internalLogger.debug("status OK")
         aux=kodi.Player.GetActivePlayers()
@@ -67,6 +68,121 @@ def get_kodi_status():
 
 
 '''----------------------------------------------------------'''
+'''----------------       kodiAlive         -------------------'''
+'''----------------------------------------------------------'''
+def kodiAlive():
+  rt=False
+  try:
+      aux=kodi.JSONRPC.Ping()
+      #helper.internalLogger.debug("Ping: {0}".format(aux))      
+      if aux['result'] == "pong":
+        rt=True
+  except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.error('Error: kodi seems not be ready to ping')
+  return rt
+
+'''----------------------------------------------------------'''
+'''----------------       what2track        -------------------'''
+'''----------------------------------------------------------'''
+
+def what2track(config):
+  rt={}
+  try:
+    with open(config["what"]) as json_data:
+      rt = json.load(json_data)
+
+  except Exception as e:
+    helper.internalLogger.error("Error processing what to track in config".format(config))
+    helper.einternalLogger.exception(e)
+
+  return rt;
+
+'''----------------------------------------------------------'''
+'''----------------       fullMatch         -------------------'''
+'''----------------------------------------------------------'''
+def fullMatch(listOfkeys,target):
+ rt=False
+ matchedItems=0
+ items=len(listOfkeys)
+ for x in listOfkeys:
+   #helper.internalLogger.debug("Trying to match'{0}' and '{1}'".format(target,x))
+   #simple word base match 
+   if x.lower() in target.lower() :
+   #m = re.search(x,target)
+   #if m:
+     matchedItems=matchedItems+1
+
+ if matchedItems>0:
+     if matchedItems == items:
+       helper.internalLogger.debug("Full match detected FOUND")
+       rt=True
+     else:
+       helper.internalLogger.debug("Almost there but not enough matching: {0}/{1} - title  {2}, target content {3}".format(matchedItems,items,target,listOfkeys))
+
+   
+ return rt
+
+'''----------------------------------------------------------'''
+'''----------------       amIwatchingIt         -------------------'''
+'''----------------------------------------------------------'''
+def amIwatchingIt(c):
+ rt=False
+ try:
+  aux=kodi.Player.GetActivePlayers()
+  #helper.internalLogger.debug("GetActivePlayers: {0}".format(aux))
+  ''' TODO ONLY CONSIDER FIRST ITEM IN PLAYERS LIST '''
+  if not aux['result']:
+   helper.internalLogger.debug("Video Off")
+  else:
+   pid=aux['result'][0]['playerid']
+   #helper.internalLogger.debug("Player Id:{0}".format(pid))
+   aux=kodi.Player.GetItem({"properties": ["title"], "playerid": pid })
+   title=aux['result']['item']['title']
+   label=aux['result']['item']['label']
+   #Try to match keystrings on it title
+   if "keystrings" in c:
+     if fullMatch(c["keystrings"],title) or fullMatch(c["keystrings"],label):
+       rt=True
+     
+ except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.error('Error: something goes bad trying to matching content keystring and now playing title')
+    helper.einternalLogger.exception(e)  
+
+ return rt
+
+'''----------------------------------------------------------'''
+'''----------------       pollAutoTracker        -------------------'''
+'''----------------------------------------------------------'''
+
+def pollAutoTracker(config):
+
+  if not kodiAlive():
+    helper.internalLogger.error("Tracker: kodi is ko, useless to try to track anything")
+    return
+  what= what2track(config)
+  if not "content" in what:
+    helper.internalLogger.debug("Tracker: nothing to track yet")
+    return
+  if not what["content"]:
+    helper.internalLogger.debug("Tracker: empty list to track")
+    return
+  for c in what["content"]:
+    helper.internalLogger.debug("Tracker: Checking status of content".format(c))
+    amIwatchingIt(c)
+    '''am i watching it
+    ok
+    else
+    have i the tracker list
+      try gather one /in ordered list
+    else
+      get the list livetv now
+      filter by STRING
+      get tracket list'''
+
+
+'''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
 '''----------------------------------------------------------'''
 
@@ -94,12 +210,27 @@ def main(configfile):
   helper.einternalLogger.critical('kodiAgent-start -------------------------------')
 
 
+  enableTracker=False
+  pollingInterval=5
+  if "auto-tracker" in configuration:
+    if "enable" in configuration["auto-tracker"]:
+      enableTracker=configuration["auto-tracker"]["enable"]
+    if "polling-interval" in configuration["auto-tracker"]:
+      pollingInterval=configuration["auto-tracker"]["polling-interval"]
+        
+
+
+
   try:
 
     global kodi
     #Login with default kodi/kodi credentials
-    kodi = Kodi(configuration["kodi"]["url"])
+    if "login" in configuration["kodi"]:
+      kodi = Kodi(configuration["kodi"]["url"],configuration["kodi"]["login"],configuration["kodi"]["password"])
+    else:
+      kodi = Kodi(configuration["kodi"]["url"])
   
+
     apiRestTask=threading.Thread(target=apirest_task,name="restapi")
     apiRestTask.daemon = True
     apiRestTask.start()
@@ -111,9 +242,11 @@ def main(configfile):
     return  
 
   try:    
-     ''' initialize contets '''
+
      while True:
-        time.sleep(1000)
+       if enableTracker:
+         pollAutoTracker(configuration["auto-tracker"])
+       time.sleep(pollingInterval)
 
 
   except Exception as e:

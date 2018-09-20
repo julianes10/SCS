@@ -1,0 +1,70 @@
+
+
+
+while 1
+
+  if something2watchNow
+  am i watching it
+    ok
+  else
+    have i the tracker list
+      try gather one /in ordered list
+    else
+      get the list livetv now
+      filter by STRING
+      get tracket list
+
+
+
+DB:
+When search?
+  ALWAYS ON (based on WHAT)  **********
+  ON DEMAND (based on specific ON/OFF trigger)
+  AT SPECIFIC DATE-TIME (based on WHAT with date time info)
+  AT SPECIFIC DATE-TIME with priority (based on WHAT if have a list with date time info)
+  AT RECURRENT SPECIFIC DATE-TIME (based on WHAT with date time info)
+  AT RECURRENT DATE-TIME with priority (based on WHAT if have a list with date time info)
+
+  
+What to search?
+* PRIORITY LIST:
+  [TYPE OF SPORT] | KEY STRING  
+
+Where to search?
+* SPECIFIC URL
+* SPECIFIC LIVE SPORT
+* ANY
+
+Fault-Tolerant:
+* always-retry
+
+Stop-mode?
+* never
+* auto stop (if time window)
+* auto stop for priority
+
+What is configurable statically?
+- when
+  enable | disable
+- what list of items ordered:
+  autosync:
+    tracker: 
+    favouritskeystring: list
+  items:
+    keystring
+    filter
+    startDateTime
+    duration
+    recurrentDays
+    recurrentHours
+    getDinamic
+- where
+  magic-addon-base-url:
+  magic-addon-steps[step1:"Live Sports", step2:"LiveTV.ru", step3="Now playing"]
+  magic-addon-magic-url: 
+
+What is configurable dinamically (mobile app)?
+- Editing info:
+  ... all item
+- Just trigger now:
+  - keystring (now 
