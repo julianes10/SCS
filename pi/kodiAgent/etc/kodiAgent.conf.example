@@ -2,7 +2,7 @@
   "log": { "logTraces":"/tmp/kodiAgent.log",
            "logExceptions":"/tmp/kodiAgente.log"
   },
-  "kodi" : {"url":"http://pi32:8080/jsonrpc"},
+  "kodi" : {"url":"http://pi2:8080/jsonrpc"},
   "auto-tracker": { 
       "enable":true,
       "addon": {

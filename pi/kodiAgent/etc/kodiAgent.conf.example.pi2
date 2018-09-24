@@ -8,6 +8,6 @@
       "addon": {
           "magic-url":"plugin://plugin.video.SportsDevil/?mode=1&item=title%3D%252ANow%2BPlaying%252A%26url%3Dhttp%253A%252F%252Flivetv123.net%252Fen%252Fallupcoming%26cfg%3Dlivetv.ru.videos.cfg%2540LIVE%2540all%26definedIn%3Dlivesports%252Flivetv.ru.cfg%26director%3DLivetv.ru%26genre%3DLive%2BSports%26type%3Drss%26icon%3D%252Fhome%252Fpi%252F.kodi%252Faddons%252Fplugin.video.SportsDevil%252Fresources%252Fimages%252Flivetv_ru.png" },
       "what":"/tmp/kodiTracker",
-      "polling-interval":2
+      "polling-interval":5
   }
 }

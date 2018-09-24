@@ -24,7 +24,7 @@ from flask import Flask, jsonify,abort,make_response,request, url_for
 from helper import *
 
 
-configuration={}
+
 
 '''----------------------------------------------------------'''
 '''----------------      API REST         -------------------'''
@@ -71,16 +71,21 @@ def get_kodi_status():
 '''----------------       kodiAlive         -------------------'''
 '''----------------------------------------------------------'''
 def kodiAlive():
-  rt=False
-  try:
+
+
+  for x in range(2):
+   if x > 0: 
+      tryKodi()
+   try:
       aux=kodi.JSONRPC.Ping()
       #helper.internalLogger.debug("Ping: {0}".format(aux))      
       if aux['result'] == "pong":
-        rt=True
-  except Exception as e:
-    e = sys.exc_info()[0]
-    helper.internalLogger.error('Error: kodi seems not be ready to ping')
-  return rt
+        return True
+   except Exception as e:
+      e = sys.exc_info()[0]
+      helper.internalLogger.error('Error: kodi seems not be ready to ping')
+
+  return False
 
 '''----------------------------------------------------------'''
 '''----------------       what2track        -------------------'''
@@ -108,8 +113,8 @@ def fullMatch(listOfkeys,target):
  for x in listOfkeys:
    #helper.internalLogger.debug("Trying to match'{0}' and '{1}'".format(target,x))
    #simple word base match 
-   #if x.lower() in target.lower() :
-   if x in target:
+   if x.lower() in target.lower() :
+   #if x in target:
    #m = re.search(x,target)
    #if m:
      matchedItems=matchedItems+1
@@ -155,28 +160,98 @@ def amIwatchingIt(c):
 
 
 '''----------------------------------------------------------'''
+'''----------------       getFileDir      -------------------'''
+'''----------------------------------------------------------'''
+def getFileDir(d):
+  rt=[]
+  try:
+   params={"properties":["title"],
+          "media":"video",
+          "sort": { "method":"label","order":"ascending"},
+          "directory": d
+          }
+   ## helper.internalLogger.debug('Quering : {0}'.format(params))
+   aux=kodi.Files.GetDirectory(params)
+
+   helper.internalLogger.debug('Dir results: {0}'.format(len(aux["result"]["files"])))
+   rt=aux["result"]["files"]
+  except Exception as e:
+   e = sys.exc_info()[0]
+   helper.internalLogger.error('Error: get dir')
+   helper.einternalLogger.exception(e) 
+  
+  return rt
+
+'''----------------------------------------------------------'''
+'''----------------       getEventsNow    -------------------'''
+'''----------------------------------------------------------'''
+def getEventsNow(trackerConfig):
+  rt=[]
+  try:
+   rt=getFileDir(trackerConfig["addon"]["magic-url"])
+   helper.internalLogger.debug('Events available now: {0}'.format(len(rt)))
+  except Exception as e:
+   e = sys.exc_info()[0]
+   helper.internalLogger.error('Error: gathering list of events now')
+   helper.einternalLogger.exception(e)  
+  return rt
+
+
+'''----------------------------------------------------------'''
+'''----------------       getEventSources    -------------------'''
+'''----------------------------------------------------------'''
+def getEventSources(item):
+  rt=[]
+  try:
+   rt=getFileDir(item["file"])
+   helper.internalLogger.debug('Sources available for target event: {0}'.format(len(rt)))
+  except Exception as e:
+   e = sys.exc_info()[0]
+   helper.internalLogger.error('Error: gathering list sources for the event')
+   helper.einternalLogger.exception(e)  
+  return rt
+
+
+'''----------------------------------------------------------'''
+'''----------------       tryPlayFile     -------------------'''
+'''----------------------------------------------------------'''
+
+def tryPlayFile(sources):
+ for source in sources:
+  try:
+   params={"properties":["title"],
+          "media":"video",
+          "sort": { "method":"label","order":"ascending"},
+          "directory": source["file"]
+          }
+   ## helper.internalLogger.debug('Quering : {0}'.format(params))
+   aux=kodi.Files.GetDirectory(params)
+   helper.internalLogger.debug('File play result: {0}'.format(aux))
+   break
+  except Exception as e:
+   e = sys.exc_info()[0]
+   helper.internalLogger.error('Error: play file')
+   helper.einternalLogger.exception(e) 
+                
+'''----------------------------------------------------------'''
 '''----------------       searchAndPlayContent        -------------------'''
 '''----------------------------------------------------------'''
-def searchAndPlayContent(c,config):
+def searchAndPlayContent(c,trackerConfig):
  rt=False
  if not "keystrings" in c:
    return False
 
  try:
-  params={"properties":["title"],
-          "media":"video",
-          "sort": { "method":"label","order":"ascending"},
-          "directory": config["addon"]["magic-url"]
-          }
-  ## helper.internalLogger.debug('Quering : {0}'.format(params))
-  aux=kodi.Files.GetDirectory(params)
-
-  ## helper.internalLogger.debug('Events NOW: {0}'.format(aux))
-  for event in aux["result"]["files"]:
+  eventsNow=getEventsNow(trackerConfig)
+  for event in eventsNow:
     #Try to match keystrings on it title
+    #helper.internalLogger.debug('Considering event {0}...'.format(event["title"]))
     if "keystrings" in c:
      if fullMatch(c["keystrings"],event["label"]) or fullMatch(c["keystrings"],event["title"]):
-       helper.internalLogger.debug('Event to play: {0} file {1}'.format(event["title"],event["title"]))
+       helper.internalLogger.debug('Event to play: {0} file {1}'.format(event["title"],event["label"]))
+       sources=getEventSources(event)
+       tryPlayFile(sources)
+                
        return True
      
  except Exception as e:
@@ -192,23 +267,45 @@ def searchAndPlayContent(c,config):
 '''----------------       pollAutoTracker        -------------------'''
 '''----------------------------------------------------------'''
 
-def pollAutoTracker(config):
+def pollAutoTracker(trackerConfig):
 
   if not kodiAlive():
     helper.internalLogger.error("Tracker: kodi is ko, useless to try to track anything")
     return
-  what= what2track(config)
+  what= what2track(trackerConfig)
   if not "content" in what:
     helper.internalLogger.debug("Tracker: nothing to track yet")
     return
   if not what["content"]:
     helper.internalLogger.debug("Tracker: empty list to track")
     return
+
+  helper.internalLogger.debug("Tracker: Checking status of contents: {0}...".format(what))
   for c in what["content"]:
-    helper.internalLogger.debug("Tracker: Checking status of content".format(c))
+    helper.internalLogger.debug("Tracker: Checking status of content {0}".format(c))
     if not amIwatchingIt(c):
-      if searchAndPlayContent(c,config):
+      if searchAndPlayContent(c,trackerConfig):
         return  ### NOTE it breaks so it is like a prio list...
+
+
+
+'''----------------------------------------------------------'''
+'''----------------       M A I N         -------------------'''
+'''----------------------------------------------------------'''
+def tryKodi():
+  global kodi
+  try:
+    helper.internalLogger.debug("Trying get kodi at {0}...".format(configuration["kodi"]["url"]))
+    #Login with default kodi/kodi credentials
+    if "login" in configuration["kodi"]:
+      kodi = Kodi(configuration["kodi"]["url"],configuration["kodi"]["login"],configuration["kodi"]["password"])
+    else:
+      kodi = Kodi(configuration["kodi"]["url"])
+  except Exception as e:
+    helper.internalLogger.critical("Error, not kodi at {0}.".format(configuration["kodi"]["url"]))
+    helper.einternalLogger.exception(e)
+    loggingEnd()
+    return  
 
 
 '''----------------------------------------------------------'''
@@ -225,6 +322,8 @@ def main(configfile):
   cfg_log_exceptions="kodiAgente.log"
   cfg_SensorsDirectory={}
   # Let's fetch data
+  global configuration
+  configuration={}
   with open(configfile) as json_data:
       configuration = json.load(json_data)
   #Get log names
@@ -252,13 +351,7 @@ def main(configfile):
 
   try:
 
-    global kodi
-    #Login with default kodi/kodi credentials
-    if "login" in configuration["kodi"]:
-      kodi = Kodi(configuration["kodi"]["url"],configuration["kodi"]["login"],configuration["kodi"]["password"])
-    else:
-      kodi = Kodi(configuration["kodi"]["url"])
-  
+    tryKodi() 
 
     apiRestTask=threading.Thread(target=apirest_task,name="restapi")
     apiRestTask.daemon = True
