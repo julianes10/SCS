@@ -12,6 +12,7 @@ import helper
 from random import randint
 from kodijson import Kodi, PLAYER_VIDEO
 import re
+import random
 
 
 
@@ -121,10 +122,10 @@ def fullMatch(listOfkeys,target):
 
  if matchedItems>0:
      if matchedItems == items:
-       helper.internalLogger.debug("Full match detected FOUND")
+       helper.internalLogger.debug("Full match detected {0}".format(target))
        rt=True
-     else:
-       helper.internalLogger.debug("Almost there but not enough matching: {0}/{1} - title  {2}, target content {3}".format(matchedItems,items,target,listOfkeys))
+     #else:
+     #  helper.internalLogger.debug("Almost there but not enough matching: {0}/{1} - title  {2}, target content {3}".format(matchedItems,items,target,listOfkeys))
 
    
  return rt
@@ -141,14 +142,17 @@ def amIwatchingIt(c):
   if not aux['result']:
    helper.internalLogger.debug("Video Off")
   else:
+   #TODO ONLY MANAGE 1 PLAYER
    pid=aux['result'][0]['playerid']
    #helper.internalLogger.debug("Player Id:{0}".format(pid))
    aux=kodi.Player.GetItem({"properties": ["title"], "playerid": pid })
+   helper.internalLogger.debug("Player INFO:{0}".format(aux))
    title=(aux['result']['item']['title'])
    label=(aux['result']['item']['label'])
    #Try to match keystrings on it title
    if "keystrings" in c:
      if fullMatch(c["keystrings"],title) or fullMatch(c["keystrings"],label):
+       helper.internalLogger.debug("Already playing it {0}".format(c["keystrings"]))
        rt=True
      
  except Exception as e:
@@ -188,6 +192,7 @@ def getFileDir(d):
 def getEventsNow(trackerConfig):
   rt=[]
   try:
+   helper.internalLogger.debug('Getting list of events available now... ')
    rt=getFileDir(trackerConfig["addon"]["magic-url"])
    helper.internalLogger.debug('Events available now: {0}'.format(len(rt)))
   except Exception as e:
@@ -203,6 +208,7 @@ def getEventsNow(trackerConfig):
 def getEventSources(item):
   rt=[]
   try:
+   helper.internalLogger.debug('Getting event sources... ')
    rt=getFileDir(item["file"])
    helper.internalLogger.debug('Sources available for target event: {0}'.format(len(rt)))
   except Exception as e:
@@ -212,22 +218,55 @@ def getEventSources(item):
   return rt
 
 
+
+'''----------------------------------------------------------'''
+def spawnedPlayFileTask(params):
+  aux=kodi.Files.GetDirectory(params) 
+  helper.internalLogger.debug('File play result: {0}'.format(aux))
+
+
+'''----------------------------------------------------------'''
+
+def spawningPlayFile(p):
+  t=threading.Thread(target=spawnedPlayFileTask,name="spawnedPlayFile",args=(p,))
+  t.daemon = True
+  t.start()
+
+
 '''----------------------------------------------------------'''
 '''----------------       tryPlayFile     -------------------'''
 '''----------------------------------------------------------'''
 
-def tryPlayFile(sources):
+def tryPlayFile(c,sources):
+ random.shuffle(sources)
  for source in sources:
   try:
+   if "Acestream" in source["title"] or "Alieztv" in source["title"]:
+     helper.internalLogger.debug('Skipped ACEstream or Alieztv')
+     continue
    params={"properties":["title"],
           "media":"video",
           "sort": { "method":"label","order":"ascending"},
           "directory": source["file"]
           }
-   ## helper.internalLogger.debug('Quering : {0}'.format(params))
-   aux=kodi.Files.GetDirectory(params)
+
+   helper.internalLogger.debug('File to play: {0}'.format(source["title"]))
+
+   ''' THIS NOT WORKING FINE... BLOCKS IN UI AND PROMT ERROR MOST OF TIME EVEN PLAY WELL
+   WORKAROUND: LAUNCH IN BACKGROUND AND JUST CHECK PLAYER STATUS AFTER A FEW SECONDS... 
+   aux=kodi.Files.GetDirectory(params) 
    helper.internalLogger.debug('File play result: {0}'.format(aux))
-   break
+   if "error" in aux:
+     helper.internalLogger.debug('Got error. Skipping this one')
+     continue
+   '''
+   spawningPlayFile(params)
+
+   for x in range(20):
+     time.sleep(1)
+     if amIwatchingIt(c):
+       return
+
   except Exception as e:
    e = sys.exc_info()[0]
    helper.internalLogger.error('Error: play file')
@@ -250,8 +289,7 @@ def searchAndPlayContent(c,trackerConfig):
      if fullMatch(c["keystrings"],event["label"]) or fullMatch(c["keystrings"],event["title"]):
        helper.internalLogger.debug('Event to play: {0} file {1}'.format(event["title"],event["label"]))
        sources=getEventSources(event)
-       tryPlayFile(sources)
-                
+       tryPlayFile(c,sources)
        return True
      
  except Exception as e:
@@ -280,12 +318,13 @@ def pollAutoTracker(trackerConfig):
     helper.internalLogger.debug("Tracker: empty list to track")
     return
 
-  helper.internalLogger.debug("Tracker: Checking status of contents: {0}...".format(what))
+  helper.internalLogger.debug("Tracker: Checking status of contents...")
   for c in what["content"]:
-    helper.internalLogger.debug("Tracker: Checking status of content {0}".format(c))
-    if not amIwatchingIt(c):
-      if searchAndPlayContent(c,trackerConfig):
-        return  ### NOTE it breaks so it is like a prio list...
+    if "keystrings" in c:
+      helper.internalLogger.debug("Tracker: Checking status of content {0}".format(c['keystrings']))
+      if not amIwatchingIt(c):
+        if searchAndPlayContent(c,trackerConfig):
+          return  ### NOTE it breaks so it is like a prio list...
 
 
 
@@ -417,8 +456,14 @@ if __name__ == '__main__':
     args = parse_args()
     main(configfile=args.configfile)
 
-
-
+## TODO
+# TVSERVICE -S IN STATUS CHECK HDMI OR NOT ....  AUTOREBOOT??
+# REBOOT
+# REST FOR UPDATE TRACKERLIST
+# IF EVENT = PEPE, BUT THEN SORUCE ITEM IS XXXXXXX THEN IF PLAYER SAID XXXXXXX CONSIDER AS ALIAS= PEPE
+# FILTER SOPCAST? 
+# APP MOVIL
+# try in spawned
 '''
 Wrapper to access kodi using jsonrpc basic commands
 Here we go: --checkPlayer
