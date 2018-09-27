@@ -6,6 +6,7 @@ import sys
 import json
 import subprocess
 import os
+import signal
 import platform
 import threading
 import helper
@@ -55,7 +56,25 @@ def get_kodi_status():
           helper.internalLogger.debug("Video On Player {0}: {1}".format(1,aux))
           title=aux['result']['item']['title']
           label=aux['result']['item']['label']
-          rt['title']=title+"-"+label
+          content="*" 
+          if "content" in GLB_meAsked2play:
+            if "keystrings" in GLB_meAsked2play["content"]:
+              content=" ".join(GLB_meAsked2play["content"]["keystrings"])
+          rt['title']=content+"-"+title+"-"+label 
+
+                
+              
+      else:
+        rt['result']='KO'
+
+      output=subprocess.check_output(['tvservice', '-s'])
+      if "HDMI" in str(output):
+          rt['hdmi']=True
+      else:
+          rt['hdmi']=False
+      #state 0x12000a [HDMI CEA (16) RGB lim 16:9], 1920x1080 @ 60.00Hz, progressive
+      #state 0x40001 [NTSC 4:3], 720x480 @ 60.00Hz, interlaced
+
       rtjson=json.dumps(rt)
 
   except Exception as e:
@@ -140,20 +159,28 @@ def amIwatchingIt(c):
   #helper.internalLogger.debug("GetActivePlayers: {0}".format(aux))
   ''' TODO ONLY CONSIDER FIRST ITEM IN PLAYERS LIST '''
   if not aux['result']:
-   helper.internalLogger.debug("Video Off")
+   helper.internalLogger.debug("Not watching it. Video Off")
   else:
    #TODO ONLY MANAGE 1 PLAYER
    pid=aux['result'][0]['playerid']
    #helper.internalLogger.debug("Player Id:{0}".format(pid))
    aux=kodi.Player.GetItem({"properties": ["title"], "playerid": pid })
-   helper.internalLogger.debug("Player INFO:{0}".format(aux))
+   #helper.internalLogger.debug("Player INFO:{0}".format(aux))
    title=(aux['result']['item']['title'])
    label=(aux['result']['item']['label'])
    #Try to match keystrings on it title
    if "keystrings" in c:
      if fullMatch(c["keystrings"],title) or fullMatch(c["keystrings"],label):
-       helper.internalLogger.debug("Already playing it {0}".format(c["keystrings"]))
+       helper.internalLogger.debug("YES - Already playing it {0}".format(c["keystrings"]))
        rt=True
+
+     #Last chance to match, is what i've asked to play even if no content in title?
+     if "content" in GLB_meAsked2play:
+        if GLB_meAsked2play["content"] == c:
+          if fullMatch(GLB_meAsked2play["title"],title) or fullMatch(GLB_meAsked2play["title"],label):
+            helper.internalLogger.debug("YES - Already playing it {0}, i've asked as {1}".format(c["keystrings"],GLB_meAsked2play["title"]))
+            rt=True
+      
      
  except Exception as e:
     e = sys.exc_info()[0]
@@ -177,11 +204,15 @@ def getFileDir(d):
    ## helper.internalLogger.debug('Quering : {0}'.format(params))
    aux=kodi.Files.GetDirectory(params)
 
-   helper.internalLogger.debug('Dir results: {0}'.format(len(aux["result"]["files"])))
-   rt=aux["result"]["files"]
+   if "result" in aux:
+     helper.internalLogger.debug('Dir results: {0}'.format(len(aux["result"]["files"])))
+     rt=aux["result"]["files"]
+   else: 
+     helper.internalLogger.error('Error: get dir'.format(aux))
+
   except Exception as e:
    e = sys.exc_info()[0]
-   helper.internalLogger.error('Error: get dir')
+   helper.internalLogger.error('Error: get dir'.format(aux))
    helper.einternalLogger.exception(e) 
   
   return rt
@@ -222,16 +253,16 @@ def getEventSources(item):
 '''----------------------------------------------------------'''
 def spawnedPlayFileTask(params):
   aux=kodi.Files.GetDirectory(params) 
-  helper.internalLogger.debug('File play result: {0}'.format(aux))
+  helper.internalLogger.debug('[{0}]File play result: {1}'.format(os.getpid(),aux))
 
 
 '''----------------------------------------------------------'''
-
 def spawningPlayFile(p):
-  t=threading.Thread(target=spawnedPlayFileTask,name="spawnedPlayFile",args=(p,))
-  t.daemon = True
-  t.start()
-
+  newpid = os.fork()
+  if newpid == 0:
+    spawnedPlayFileTask(p)
+    exit(0)
+  return newpid
 
 '''----------------------------------------------------------'''
 '''----------------       tryPlayFile     -------------------'''
@@ -260,12 +291,21 @@ def tryPlayFile(c,sources):
      helper.internalLogger.debug('Got error. Skipping this one')
      continue
    '''
-   spawningPlayFile(params)
+   pid=spawningPlayFile(params)
+   global GLB_meAsked2play
+   GLB_meAsked2play={"content":c,"title":source["title"]}  
+   # some trackers later do not back with original content but this title...
 
-   for x in range(20):
-     time.sleep(1)
+   for x in range(30):
+     time.sleep(3)
      if amIwatchingIt(c):
+       helper.internalLogger.debug('Killing subprocess just in case')
+       os.kill(pid, signal.SIGTERM)
        return
+  
+   helper.internalLogger.debug('Killing subprocess just in case')
+   os.kill(pid, signal.SIGKILL)
+   
 
   except Exception as e:
    e = sys.exc_info()[0]
@@ -376,6 +416,8 @@ def main(configfile):
   helper.internalLogger.critical('kodiAgent-start -------------------------------')  
   helper.einternalLogger.critical('kodiAgent-start -------------------------------')
 
+  global GLB_meAsked2play
+  GLB_meAsked2play={}
 
   enableTracker=False
   pollingInterval=5
@@ -457,10 +499,8 @@ if __name__ == '__main__':
     main(configfile=args.configfile)
 
 ## TODO
-# TVSERVICE -S IN STATUS CHECK HDMI OR NOT ....  AUTOREBOOT??
 # REBOOT
 # REST FOR UPDATE TRACKERLIST
-# IF EVENT = PEPE, BUT THEN SORUCE ITEM IS XXXXXXX THEN IF PLAYER SAID XXXXXXX CONSIDER AS ALIAS= PEPE
 # FILTER SOPCAST? 
 # APP MOVIL
 # try in spawned
