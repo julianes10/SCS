@@ -66,14 +66,28 @@ def get_kodi_status():
               
       else:
         rt['result']='KO'
+      
 
-      output=subprocess.check_output(['tvservice', '-s'])
+      try:
+        output="--"
+        output=subprocess.check_output(['tvservice', '-s'])
+      except Exception as e:
+        e = sys.exc_info()[0]
+        helper.internalLogger.error('tvservice not seems to work')
+        helper.einternalLogger.exception(e)  
+        
       if "HDMI" in str(output):
           rt['hdmi']=True
       else:
           rt['hdmi']=False
       #state 0x12000a [HDMI CEA (16) RGB lim 16:9], 1920x1080 @ 60.00Hz, progressive
       #state 0x40001 [NTSC 4:3], 720x480 @ 60.00Hz, interlaced
+
+      #Now tracker information
+      if "auto-tracker" in configuration:     
+        rt['auto-tracker-what']=what2track(configuration["auto-tracker"])
+      else:
+        rt['auto-tracker-what']={}
 
       rtjson=json.dumps(rt)
 
@@ -87,6 +101,35 @@ def get_kodi_status():
   return rtjson
 
 
+@api.route('/api/v1.0/kodi/reboot', methods=['GET'])
+def get_kodi_reboot():
+  helper.internalLogger.debug("reboot required")
+  rt = {}
+  try:
+        import os
+        os.system('sudo shutdown -r now &')
+        rt['result']='OK'
+  except Exception as e:
+        helper.internalLogger.error('reboot not seems to work')
+        helper.einternalLogger.exception(e)  
+        rt['result']='KO'
+  rtjson=json.dumps(rt)
+  return rtjson
+
+
+@api.route('/api/v1.0/kodi/tracker', methods=['POST'])
+def post_kodi_tracker():
+    rt=jsonify({'result': 'OK'})
+    if not request.json: 
+        abort(400)
+
+    if "auto-tracker" in configuration:
+      if "what" in configuration["auto-tracker"]:
+        with open(configuration["auto-tracker"]["what"], 'w') as outfile:
+          json.dump(request.json, outfile)
+          return rt, 201
+
+    abort(400)
 '''----------------------------------------------------------'''
 '''----------------       kodiAlive         -------------------'''
 '''----------------------------------------------------------'''
