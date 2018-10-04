@@ -6,8 +6,6 @@
 #include "SimpleTimer.h"
 #include "stringQueue.h"
 
-
-#define NUM_LEDS 46
 #define NUM_MAX_QUEUE 5
 
 //-------------
@@ -16,7 +14,7 @@ EM SERIAL PROTOCOL, INEFFICIENT,UNSECURE, BUT EASY TO READ, QUICK TO IMPLEMENT A
 :<TYPE>[<SUBTYPE>|<VALUE><SUBTYPE>|<VALUE>...] ;[more commands....]...\n
 TYPES:
 */
-  #define TYPE_LED    'L' // (led strip)
+  #define TYPE_LED    'L' // (led strip protocol id default identifier)
 // For subtypes of leds see and protocol details go to  _h
 //SUBTYPES led strip PROTOCOL
   #define LS_RESET   'X'  // off led strip and reset any variable to default
@@ -49,8 +47,7 @@ TYPES:
 class LSEM
 {
  public:
-
-  LSEM();
+  LSEM(CRGB *ls,uint8_t m, timer_callback cbp,timer_callback cbt);
 
   void refresh();
 
@@ -61,16 +58,17 @@ class LSEM
 
 
 
-  void callbackTimeout(void);
-  void callbackPause(void);
+  void callbackTimeout();
+  void callbackPause();
 
   bool getDebug()       {return _debug;}
   void setDebug(bool b);
 
-
+  void customProtocolId(char p){_ProtocolId=p;}
 
  private:
-  CRGB _leds[NUM_LEDS];
+  char _ProtocolId;
+  CRGB *_leds;
   stringQueue _queue;
   char _mode;
   uint8_t _one;
@@ -80,6 +78,7 @@ class LSEM
   CRGB _rollingTestColor;
   int _direction;
   bool _debug;
+  uint8_t _NUM_LEDS;
 
   int  _timeout; //T
   int  _pause; //P
@@ -87,6 +86,9 @@ class LSEM
   int  _timerPause; 
   bool _timeoutExpired;
   bool _pauseExpired;
+
+  timer_callback _cbt;
+  timer_callback _cbp;
 
 
   void _setMode(char m);
@@ -108,7 +110,7 @@ class LSEM
   void _setAllLeds(CRGB color);
 };
 
-extern class LSEM LSEM;
+//extern class LSEM LSEM;
 #endif
 
 
