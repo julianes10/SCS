@@ -46,6 +46,7 @@ class CarEngine
   void setDebug(bool b);
   bool getDebug()       {return _debug;}
   void reset();
+  uint8_t getMode(){return _mode;}
 
 
 

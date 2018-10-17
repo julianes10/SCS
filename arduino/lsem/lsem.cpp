@@ -58,6 +58,7 @@ void LSEM::refresh(void)
     case LS_MODE_NOISE:          _doNoise();         break;
     case LS_MODE_KNIGHT_RIDER:   _doRollingColor(_color,false,true); break;
     case LS_MODE_RKNIGHT_RIDER:  _doRollingColor(_color,true,true); break;  
+    case LS_MODE_PATTERNS:       _doPatterns();      break;
     default: reset();                       break;
   }
   //FastLED.show();-- do in main loop, affecting all instances
@@ -108,6 +109,11 @@ void LSEM::reset(void)
   _timeout=0; //T
   _pause=0;   //P
 
+  for (int i=0;i<MAX_PATTERNS;i++)
+    _patternsList[i]=0;
+  _maxPatterns=0;
+  _currentPattern=0;
+
 }
 
 //------------------------------------------------
@@ -116,6 +122,13 @@ void LSEM::setDebug(bool b)
   _debug=b;
   if (b) Serial.println(F("DEBUG: Debug is enable"));
   else   Serial.println(F("DEBUG: Debug is disable"));
+}
+
+//------------------------------------------------
+void LSEM::setPattern(uint8_t pos,CRGB *p)
+{
+  _patternsList[pos]=p;
+
 }
 
 
@@ -201,6 +214,11 @@ uint8_t LSEM::_readSerialCommand(char *cmd) {
           case LS_MODE_ONE:
             if ((len-(index+2)) <0) {if (_debug){Serial.println(F("DEBUG: incomplete ls_mode_one"));} goto exitingCmd;}
             _setLed((uint8_t)strtol(&cmd[index],kk,10));
+            index+=2;
+            break;
+          case LS_MODE_PATTERNS:
+            if ((len-(index+2)) <0) {if (_debug){Serial.println(F("DEBUG: incomplete ls_mode_one"));} goto exitingCmd;}
+            _setMaxPatterns((uint8_t)strtol(&cmd[index],kk,10));
             index+=2;
             break;
           default: _setMode(bk); if (_debug){Serial.println(F("DEBUG: LS unexpected mode, ignoring it"));} goto exitingCmd;
@@ -392,22 +410,38 @@ random(max)
   _pauseExpired=false;
 }
 
+
+//------------------------------------------------
+void LSEM::_doPatterns()
+{ 
+
+  if (!_pauseExpired) return;
+
+  uint8_t nextPattern=(_currentPattern+1)%_maxPatterns;
+  for (int i=0;i<_NUM_LEDS;i++)
+  {
+    _leds[i]=_patternsList[nextPattern][i];
+  }
+  _currentPattern=nextPattern;
+  _pauseExpired=false;
+}
 //------------------------------------------------
 void LSEM::_debugInfo()
 {
   char *str=0;
-  Serial.print(":LSDEBUG");
-  Serial.print(":LM"); Serial.print(_mode);
-  Serial.print(":LT"); Serial.print(_timeout);
-  Serial.print(":LP"); Serial.print(_pause);
-  Serial.print(":LC"); Serial.print((long int)_color);
-  Serial.print(":Lq"); Serial.print(_queue.count());
-  Serial.print(":Lh"); Serial.print(_queue.getHead());
-  Serial.print(":Lt"); Serial.print(_queue.getTail());
+  Serial.print(":");Serial.print(_ProtocolId);Serial.print("SDEBUG");
+  Serial.print(":");Serial.print(_ProtocolId);Serial.print("M"); Serial.print(_mode);
+  Serial.print(":");Serial.print(_ProtocolId);Serial.print("T"); Serial.print(_timeout);
+  Serial.print(":");Serial.print(_ProtocolId);Serial.print("P"); Serial.print(_pause);
+  Serial.print(":");Serial.print(_ProtocolId);Serial.print("C"); Serial.print((long int)_color);
+  Serial.print(":");Serial.print(_ProtocolId);Serial.print("MP"); Serial.print((uint8_t)_maxPatterns);
+  Serial.print(":");Serial.print(_ProtocolId);Serial.print("q"); Serial.print(_queue.count());
+  Serial.print(":");Serial.print(_ProtocolId);Serial.print("h"); Serial.print(_queue.getHead());
+  Serial.print(":");Serial.print(_ProtocolId);Serial.print("t"); Serial.print(_queue.getTail());
   for (int i=0;i<MAX_STRINGS_IN_QUEUE;i++){
     str=_queue.peek(i);
     if (str) {
-     Serial.print(":Lt");Serial.print(i);
+     Serial.print(":");Serial.print(_ProtocolId);Serial.print("t");Serial.print(i);
      Serial.print(str);
     }
   }

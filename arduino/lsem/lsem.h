@@ -7,7 +7,7 @@
 #include "stringQueue.h"
 
 #define NUM_MAX_QUEUE 5
-
+#define MAX_PATTERNS  10
 //-------------
 /*
 EM SERIAL PROTOCOL, INEFFICIENT,UNSECURE, BUT EASY TO READ, QUICK TO IMPLEMENT AND TEST:
@@ -24,7 +24,7 @@ TYPES:
                           //    e.g 0300, 30 seconds. Default 0 NO timeout
   #define LS_PAUSE   'P'  // (pause)   with VALUE:MS in 4 ascii in decs of seconds filled with zeors 
                           //    e.g 4000, 4  seconds. Default 0 no pause
-  #define LS_DEBUG_ON  'D' // Enable debug
+  #define LS_DEBUG_ON  'D'// Enable debug
   #define LS_DEBUG_OFF 'd' // Disable debug
   #define LS_STATUS_REQ 'S'  // Ask for status information over this serial protocol answer TODO spec output
 
@@ -41,6 +41,7 @@ TYPES:
     #define LS_MODE_NOISE          'N'  //rainbow. With general settings: T,P
     #define LS_MODE_KNIGHT_RIDER   'K'  //knight rider effect. With general settings: T,P,C
     #define LS_MODE_RKNIGHT_RIDER  'k'  //reverse knight rider effect. With general settings: T,P,C
+    #define LS_MODE_PATTERNS       'P'  //put configured patters VALUE:LED_POSITION 2 ascii decimal. With general settings: T,P
   #define LS_ENQUEUE 'Q'  // Enqueue the rest of the line commands to play when timeout current mode.
 
 
@@ -55,9 +56,6 @@ class LSEM
   void processCommands(char *inputString);
   bool isIdle(){return ((_mode==LS_MODE_ZERO) && (_queue.count()==0)); }
 
-
-
-
   void callbackTimeout();
   void callbackPause();
 
@@ -66,9 +64,14 @@ class LSEM
 
   void customProtocolId(char p){_ProtocolId=p;}
 
+  void setPattern(uint8_t pos,CRGB *p);
+
  private:
   char _ProtocolId;
   CRGB *_leds;
+  CRGB *_patternsList[MAX_PATTERNS];
+  uint8_t _maxPatterns;
+  uint8_t _currentPattern;  
   stringQueue _queue;
   char _mode;
   uint8_t _one;
@@ -95,6 +98,7 @@ class LSEM
   char _getMode(){return _mode;}
   void _setColor(uint32_t c);
   void _setLed(uint8_t led);
+  void _setMaxPatterns(uint8_t p){ _maxPatterns=p; }
   void _setTimeout(uint16_t t);
   void _setPause(uint16_t p);
   void _resetQueue();
@@ -107,6 +111,7 @@ class LSEM
   void _doColor();
   void _doRainbow();
   void _doNoise();
+  void _doPatterns();
   void _setAllLeds(CRGB color);
 };
 
