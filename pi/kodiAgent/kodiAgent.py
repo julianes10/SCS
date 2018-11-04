@@ -15,7 +15,10 @@ from kodijson import Kodi, PLAYER_VIDEO
 import re
 import random
 
-
+def getVersion():
+   rt={}
+   rt['vsw']="2017.11.3" #TODO GET FROM DEPLOYMENT, DATE, HASH
+   return rt
 
 
 #Code copy and adapted from https://github.com/adafruit/Adafruit_Python_DHT/blob/master/examples/simpletest.py
@@ -25,7 +28,56 @@ from flask import Flask, jsonify,abort,make_response,request, url_for
 
 from helper import *
 
+class TrackerStats:
+  def __init__(self):
+    self.reset()
+  def reset(self):
+    self.playOn=True
+    self.numEvents = 0
+    self.numSourcesTargetEvent = 0
+    self.numSourcesTargetEventAvailable = 0
+    self.numFails = 0
+    self.numSuccess = 0
+    self.timeFailing = 0
+    self.timeSucceeding = 0
+    self.latestUpdate = 0
+  def toDict(self):
+    rt={}
+    rt['numEvents'] = self.numEvents
+    rt['numSourcesTargetEvent'] = self.numSourcesTargetEvent
+    rt['numSourcesTargetEventAvailable'] = self.numSourcesTargetEventAvailable
+    rt['numFails'] = self.numFails
+    rt['numSuccess'] = self.numSuccess
+    rt['timeFailing'] = self.timeFailing
+    rt['timeSucceeding'] = self.timeSucceeding
+    return rt
 
+  def success(self):
+    self.numSuccess = self.numSuccess+1
+    self.updateTimings(True)
+
+  def fail(self):
+    self.numFails = self.numFails+1
+    self.updateTimings(False)
+
+
+  def updateTimings(self,on):
+    if self.latestUpdate == 0:  #first time only
+      self.latestUpdate=time.time()
+  
+    if self.playOn and on:
+      self.timeSucceeding = self.timeSucceeding + (time.time() - self.latestUpdate)
+    else:
+      self.timeFailing = self.timeFailing + (time.time() - self.latestUpdate)
+    self.playOn=on
+    self.latestUpdate=time.time()
+    '''else if not self.playOn and not on:
+      self.timeFailing = self.timeFailing + (time.time() - self.latestUpdate)
+    else if not self.playOn and on:
+      self.timeFailing = self.timeFailing + (time.time() - self.latestUpdate)
+    else if self.playOn and off:
+      self.timeFailing = self.timeFailing + (time.time() - self.latestUpdate)
+    ''' 
 
 
 '''----------------------------------------------------------'''
@@ -38,9 +90,13 @@ api = Flask("api")
 def get_kodi_status():
   helper.internalLogger.debug("status required")
   rt = {}
+  rt['vsw']={}
+  rt['vsw']['kodiAgent']=getVersion()
   try:
       if kodiAlive():
         rt['result']='OK'
+        rt['vsw']['kodi']=getKodiVersion()
+        rt['vsw']['sd']=getSDVersion()
         helper.internalLogger.debug("status OK")
         aux=kodi.Player.GetActivePlayers()
         helper.internalLogger.debug("GetActivePlayers: {0}".format(aux))
@@ -61,11 +117,11 @@ def get_kodi_status():
             if "keystrings" in GLB_meAsked2play["content"]:
               content=" ".join(GLB_meAsked2play["content"]["keystrings"])
           rt['title']=content+"-"+title+"-"+label 
-
-                
               
       else:
         rt['result']='KO'
+
+      rt['tracker-stats']=GLB_ts.toDict()       
       
 
       try:
@@ -149,6 +205,34 @@ def kodiAlive():
       helper.internalLogger.error('Error: kodi seems not be ready to ping')
 
   return False
+
+def getKodiVersion():
+   rt={}
+   try:
+      aux=kodi.Application.GetProperties({ "properties":["version"] })
+      if not aux['result']:
+         helper.internalLogger.debug("No result kodi version")
+      else:
+         rt=aux
+   except Exception as e:
+      e = sys.exc_info()[0]
+      helper.internalLogger.error('Error: kodi seems not be ok, getting version fails')
+   return rt
+
+def getSDVersion():
+   rt={}
+   try:
+      aux=kodi.Addons.GetAddonDetails({ "addonid":"plugin.video.SportsDevil", "properties":["version"] })
+      if not aux['result']:
+         helper.internalLogger.debug("No result sd version")
+      else:
+         rt=aux
+   except Exception as e:
+      e = sys.exc_info()[0]
+      helper.internalLogger.error('Error: kodi seems not be ok, getting version fails')
+   return rt
+
+
 
 '''----------------------------------------------------------'''
 '''----------------       what2track        -------------------'''
@@ -273,6 +357,9 @@ def getEventsNow(trackerConfig):
    e = sys.exc_info()[0]
    helper.internalLogger.error('Error: gathering list of events now')
    helper.einternalLogger.exception(e)  
+
+
+  GLB_ts.numEvents=len(rt)
   return rt
 
 
@@ -313,6 +400,17 @@ def spawningPlayFile(p):
 
 def tryPlayFile(c,sources):
  random.shuffle(sources)
+
+
+ GLB_ts.numSourcesTargetEvent = len(sources)
+ cont=0
+ for source in sources:
+   if "Acestream" in source["title"] or "Alieztv" in source["title"]:
+     continue
+   cont=cont+1
+ GLB_ts.numSourcesTargetEventAvailable = cont
+
+
  for source in sources:
   try:
    if "Acestream" in source["title"] or "Alieztv" in source["title"]:
@@ -344,11 +442,14 @@ def tryPlayFile(c,sources):
      if amIwatchingIt(c):
        helper.internalLogger.debug('Killing subprocess just in case')
        os.kill(pid, signal.SIGTERM)
+       GLB_ts.success()
        return
+     else:
+       GLB_ts.updateTimings(False)
   
    helper.internalLogger.debug('Killing subprocess just in case')
    os.kill(pid, signal.SIGKILL)
-   
+   GLB_ts.fail()
 
   except Exception as e:
    e = sys.exc_info()[0]
@@ -405,11 +506,13 @@ def pollAutoTracker(trackerConfig):
   for c in what["content"]:
     if "keystrings" in c:
       helper.internalLogger.debug("Tracker: Checking status of content {0}".format(c['keystrings']))
-      if not amIwatchingIt(c):
+      if amIwatchingIt(c):
+        GLB_ts.updateTimings(True)
+      else:
+        GLB_ts.updateTimings(False)
         if searchAndPlayContent(c,trackerConfig):
           return  ### NOTE it breaks so it is like a prio list...
-
-
+      
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
@@ -470,8 +573,8 @@ def main(configfile):
     if "polling-interval" in configuration["auto-tracker"]:
       pollingInterval=configuration["auto-tracker"]["polling-interval"]
         
-
-
+  global GLB_ts
+  GLB_ts=TrackerStats()
 
   try:
 
