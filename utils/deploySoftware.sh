@@ -37,6 +37,45 @@ done
 
 TMP_DEPLOY="/home/pi/deploy.tmp"
 
+dumpGIT() {
+  file=$1
+  path=$2
+  suffix=$3
+
+  pushd $path
+  GIT=`git log -n 1 --pretty=format:"%ad" --date=iso`
+
+  echo "\"git-date$suffix\":\"$GIT\"," >> $file
+
+
+  GIT=`git log -n 1 --pretty=format:"%h" --date=iso`
+  echo "\"git-hash$suffix\":\"$GIT\"," >> $file
+
+
+  aux=`git status --porcelain --untracked-files=no`
+  if [ "$aux" = "" ]; then
+    echo -n "\"git-dirty$suffix\":false" >> $file
+  else
+    echo -n "\"git-dirty$suffix\":true" >> $file
+  fi
+  git status --porcelain --untracked-files=no > $file.git.dirty$suffix
+  popd
+}
+
+VSW_FILE="/tmp/vsw"
+dumpVersionInfo() {
+  file=$1
+  DATE=`date '+%Y-%m-%d %H:%M:%S %z'`
+  echo "{\"deployment-date\":\"$DATE\"," > $file 
+  dumpGIT $file "." ""
+  echo "," >>$file
+
+  dumpGIT $file "./SCS" "-scs"
+
+  echo "}" >>$file
+
+}
+
 #---------------------------------------------------------------------------
 echo "This script will deploy SERVICES_LIST in your system"
 if [ "$1" == "-h" -o "$1" == "--help" ]; then
@@ -64,6 +103,9 @@ for item in $SERVICES_LIST; do
     echo "Service to install: $item"
 done
 
+dumpVersionInfo $VSW_FILE
+
+
 if [ "$arg_dest" == "remote" ]; then
   if [ "$arg_ori" == "local" ]; then
 
@@ -79,7 +121,7 @@ if [ "$arg_dest" == "remote" ]; then
     echo "Copying local files from . to $TMP_DEPLOY..."
     ssh -p $PI_PORT pi@$PI_IPNAME "sudo rm -rf $TMP_DEPLOY; mkdir -p $TMP_DEPLOY"
     export GLOBIGNORE=".git:./arduino/build-uno:./arduino/build-nano";
-    scp -r -P $PI_PORT ./pi/* $PI_USER@$PI_IPNAME:$TMP_DEPLOY
+    scp -r -P $PI_PORT ./pi/* $VSW_FILE* $PI_USER@$PI_IPNAME:$TMP_DEPLOY
 
     DEPLOY_CONFIG=""
     if [ $deployConfig -eq 1 ]; then
@@ -117,6 +159,8 @@ if [ "$arg_dest" == "remote" ]; then
     done
     DEPLOY_SERVICE="$DEPLOY_SERVICE sudo systemctl daemon-reload;"
     DEPLOY_SERVICE="$DEPLOY_SERVICE sudo systemctl enable  $SERVICES_LIST;"
+
+
 
     echo "Deploying on $DEPLOY_FOLDER, setup config, arduino, start and status..."
     ssh -p $PI_PORT pi@$PI_IPNAME "sudo rm -rf $DEPLOY_FOLDER; sudo mv $TMP_DEPLOY $DEPLOY_FOLDER; $DEPLOY_CONFIG $DEPLOY_SERVICE $DEPLOY_ARDUINO sudo systemctl start $SERVICES_LIST;sudo systemctl status $SERVICES_LIST;"

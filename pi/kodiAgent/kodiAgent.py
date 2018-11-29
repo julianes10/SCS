@@ -17,7 +17,13 @@ import random
 
 def getVersion():
    rt={}
-   rt['vsw']="2017.11.3" #TODO GET FROM DEPLOYMENT, DATE, HASH
+   try:
+     if "vsw-file" in configuration:
+       with open(configuration["vsw-file"]) as json_data:
+          rt=json.load(json_data)
+   except Exception as e:
+        helper.internalLogger.error('no vsw json data')
+        helper.einternalLogger.exception(e)  
    return rt
 
 
@@ -34,6 +40,7 @@ class TrackerStats:
   def reset(self):
     self.playOn=True
     self.numEvents = 0
+    self.numEventsLIVE = 0
     self.numSourcesTargetEvent = 0
     self.numSourcesTargetEventAvailable = 0
     self.numFails = 0
@@ -44,12 +51,13 @@ class TrackerStats:
   def toDict(self):
     rt={}
     rt['numEvents'] = self.numEvents
+    rt['numEventsLIVE'] = self.numEventsLIVE
     rt['numSourcesTargetEvent'] = self.numSourcesTargetEvent
     rt['numSourcesTargetEventAvailable'] = self.numSourcesTargetEventAvailable
     rt['numFails'] = self.numFails
     rt['numSuccess'] = self.numSuccess
-    rt['timeFailing'] = self.timeFailing
-    rt['timeSucceeding'] = self.timeSucceeding
+    rt['timeFailing'] = round(self.timeFailing,2)
+    rt['timeSucceeding'] = round(self.timeSucceeding,2)
     return rt
 
   def success(self):
@@ -360,6 +368,14 @@ def getEventsNow(trackerConfig):
 
 
   GLB_ts.numEvents=len(rt)
+
+  cont=0
+  for ev in rt:
+   if "LIVE" in ev["title"]:
+     cont=cont+1
+  GLB_ts.numEventsLIVE = cont
+
+
   return rt
 
 
