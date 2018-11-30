@@ -4,7 +4,7 @@ After=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/opt/PROJECT_NAME/sbHotword/ipaem.s.sh
+ExecStart=/opt/PROJECT_NAME/sbHotword/install/sbHotword.sh
 Restart=always
 
 [Install]

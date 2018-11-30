@@ -12,6 +12,7 @@ interrupted = False
 def hotword_handler(model):
     print("Alternative hotword detected {}".format(model));
     curl="curl -i -H \"Content-Type: application/json\" -X POST -d  '{\"debug\":\"snowboy "+model+"\"}' http://localhost:5000/ipaem/api/v1.0/hotword"
+    p=subprocess.Popen(['bash','-c',curl])
     p.wait()
 
 def signal_handler(signal, frame):
