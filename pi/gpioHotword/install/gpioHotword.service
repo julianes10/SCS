@@ -1,0 +1,14 @@
+[Unit]
+Description= GPIO to awake the beast GA
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/opt/PROJECT_NAME/gpioHotword/gpioHotword.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+
