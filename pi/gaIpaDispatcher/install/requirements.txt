@@ -10,29 +10,6 @@ apt-get install python-pip python-dev build-essential
 
 
 
-# Snowboy stuff dependencies: 
-------------------------------
-cd
-wget http://portaudio.com/archives/pa_stable_v190600_20161030.tgz
-tar xvf pa_stable_v190600_20161030.tgz 
-cd portaudio
-./configure && make
-sudo make install
-sudo apt-get install libasound-dev
-pip install pyaudio
-sudo apt-get install sox
-sudo apt-get install libopenblas-dev 
-sudo apt-get install libatlas-base-dev 
-sudo apt-get install python-pyaudio python3-pyaudio sox
-
-
-cd
-wget https://s3-us-west-2.amazonaws.com/snowboy/snowboy-releases/rpi-arm-raspbian-8.0-1.1.1.tar.bz2
-tar jxf rpi-arm-raspbian-8.0-1.1.1.tar.bz2
-ln -s rpi-arm-raspbian-8.0-1.1.1 snowboy
-#note run defining PYTHONPATH=snowboy snowboyHotword.py
-
-
 # ga stuff dependencies for gaIpaDispatcher:
 ## MainSourcehttps://developers.google.com/assistant/sdk/develop/python/run-sample
 -----------------------------------------------------------------------------------
@@ -45,23 +22,17 @@ python -m pip install --upgrade google-assistant-library
 
 pip install flask
   
-## An put your json google credentials in etc
+## GET YOUR CREDENTIALS FOR A SPECIFIC DEVICE
+Go to your project, in google cloud plaform https://console.cloud.google.com
+Select a project and go to APIs and services, creentials: .ej: https://console.cloud.google.com/apis/credentials?project=testgasdk-180808
+Create new one client secrets and donwload it
+Generate locally final request in console:
+#google-oauthlib-tool --client-secrets <client_secret_DONWLOADED.json>  --scope  https://www.googleapis.com/auth/assistant-sdk-prototype --save --headless
+This ask to google to generate credentials, follow the link in a browser, copy "key" and paste in command line again. 
+>>credentials saved: $HOME/.config/google-oauthlib-tool/credentials.json
+Other info google credentials in etc:
 # Check if needed https://developers.google.com/assistant/sdk/develop/python/config-dev-project-and-account
-(env) pi@pi32:~/ipaem $ tree /etc/ipaem/
-/etc/ipaem/
-├── google-oauthlib-tool
-│   └── credentials.json
-└── ipaem.conf
-
-
-
-#3rd parties
-sudo apt-get install kodi
-
-##Setup for kodi
--Install tunein addon, download, transfer and install from zip in kodi https://github.com/brianhornsby/plugin.audio.tuneinradio/releases/download/v3.0.0/plugin.audio.tuneinradio-3.0.0.zip, allow unknow sources first.
--add external control on 8080 for jsonrpc working
-
+Run e.g: python ./gaIpaDispatcher.py --configfile etc/ipaem.conf.example --credentials $HOME/.config/google-oauthlib-tool/credentials.json
 
 #Arduino deps
 ## To debug and develop really
