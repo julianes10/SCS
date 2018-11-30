@@ -1,0 +1,14 @@
+[Unit]
+Description= Voice detection dispatching local action plus usage of google assistant
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/opt/PROJECT_NAME/gaIpaDispatcher/gaIpaDispatcher.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+
