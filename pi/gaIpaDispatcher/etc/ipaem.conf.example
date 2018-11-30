@@ -1,0 +1,149 @@
+{
+  "log": { "logTraces":"/tmp/ipaem.log",
+           "logExceptions":"/tmp/ipaeme.log"
+  },
+  "logp": { "logTraces":"/tmp/ipaemp.log",
+            "logExceptions":"/tmp/ipaempe.log"
+  },
+  "ledStrip": { "port":"/dev/ttyUSB0",
+                "speed":"9600",
+                "timeout":10
+  },
+  "audios": {
+              "bootNO":"/home/pi/audios/ongoing.wav",
+              "ack":"/home/pi/audios/shortBeep.wav",
+              "gawaiting":"/home/pi/audios/ding.wav",
+              "gafinished":"/home/pi/audios/dong.wav",
+              "waitpls":"/home/pi/audios/fax_call.wav",
+              "fail":"/home/pi/audios/errorBeep.wav",
+              "crash":"/home/pi/audios/glass.wav"
+  },
+  "LocalActions" : {
+      "Volume":  {  "input":["audio local"],
+                    "output":
+                        {  
+                          "next" :"chat"
+                        },
+                    "nextLevel": 
+                        { 
+                          "commonOutput" : {
+                              "cmd": "amixer -c 0 set PCM ARG1",
+    			                    "background":false,
+                              "feedback": "ack",
+                              "next" :"end" },
+                          "up":     { "input": ["up"],  "arg1": "5dB+"}, 
+                          "down":   { "input": ["down"],  "arg1": "5dB-"}, 
+                          "top":    { "input": ["top"],   "arg1": "100%"},
+                          "low":    { "input": ["low"],   "arg1": "50%"},
+                          "mute":   { "input": ["mute"],  "arg1": "mute"},
+                          "unmute": { "input": ["back"],  "arg1": "unmute"}
+                        }
+                },
+      "Radio":  {   "input":["radio","online radio","streaming"],
+                    "output":
+                        {  
+    			                "background":true,
+                          "next" :"chat"
+                        },
+                    "nextLevel": 
+                        { 
+                          "commonOutput" : {
+                              "cmd": "/opt/ipaem/gaIpaDispatcher/tuneInWrapper.sh ARG1",
+    			                    "background":true,
+                              "feedback": "waitpls",
+                              "next" :"end" },
+                          "OndaCero":   { "input": ["onda"],   "arg1": "s185285"}, 
+                          "CadenaSer":  { "input": ["cadena ser"],  "arg1": "s163234"}, 
+                          "COPE":       { "input": ["sports"],  "arg1": "p1017052"},
+                          "esRadio":    { "input": ["is radio"],     "arg1": "s111410"},
+                          "BBCWSN" :    { "input": ["bbc"],          "arg1": "s24948"},
+                          "stop" :      { "input": ["stop"],         "arg1": "STOP", 
+                                          "output": {"feedback": "ack"}}
+                        }
+                },
+      "Youtube-Search":  { "input":["find music"],
+                    "output":
+                        {  
+    			                "background":true,
+                          "next" :"chat"
+                        },
+                    "nextLevel": 
+                        { 
+                          "commonOutput" : {
+                              "cmd": "/opt/ipaem/gaIpaDispatcher/YoutubePluginWrapper.sh ARG1 \"SPEECH2TEXT\" /tmp/ipaem.ysf",
+    			                    "background":true,
+                              "feedback": "waitpls",
+                              "next" :"end" },
+                          "random":    { "input": ["random"],  "arg1": "--search-random"},
+                          "find":      { "input": ["find"],    "arg1": "--search"}
+                        }
+                },
+      "Youtube":  { "input":["music"],
+                    "output":
+                        {  
+    			                "background":true,
+                          "next" :"chat"
+                        },
+                    "nextLevel": 
+                        { 
+                          "commonOutput" : {
+                              "cmd": "/opt/ipaem/gaIpaDispatcher/YoutubePluginWrapper.sh ARG1",
+    			                    "background":true,
+                              "feedback": "waitpls",
+                              "next" :"end" },
+                          "baker":   { "input": ["baker"],   "arg1": "--url https://www.youtube.com/watch?v=8VJ4A_Cw97Q"}, 
+                          "piano":   { "input": ["piano jazz"],  "arg1": "--url https://www.youtube.com/watch?v=82TD06U4ppA"}, 
+                          "chet":    { "input": ["chet"],  "arg1": "--url https://www.youtube.com/watch?v=KWzJGRh_Tsw"},
+                          "next":    { "input": ["next"],  "arg1": "--next /tmp/ipaem.ysf"},
+                          "back":    { "input": ["back"],  "arg1": "--back /tmp/ipaem.ysf"},
+                          "stop" :   { "input": ["stop"],         "arg1": "--stop", 
+                                          "output": {"feedback": "ack"}}
+                        }
+                },
+      "LedStrip":  { "input":["light","lights"],
+                    "output":
+                        {  
+    			                "background":true,
+                          "next" :"chat"
+                        },
+                    "nextLevel": 
+                        { 
+                          "commonOutput" : {
+                              "cmd": "/opt/ipaem/gaIpaDispatcher/piInoagentWrapper.sh ARG1 \"SPEECH2TEXT\"",
+    			                    "background":true,
+                              "feedback": "ack",
+                              "next" :"end" },
+                          "fullcolor":    { "input": ["full color"],   "arg1": "--mode fullColor"},
+                          "rainbow":    { "input": ["rainbow"],   "arg1": "--mode rainbow"},
+                          "rolling":    { "input": ["rolling"],   "arg1": "--mode rolling"},
+                          "knightRider":    { "input": ["knight rider","coche fantastico","boomerang"],   "arg1": "--mode knightRider"},
+                          "color":    { "input": ["color","colored"],  "arg1": "--color"},
+                          "on":       { "input": ["on"],     "arg1": "--on"},
+                          "off":      { "input": ["off"],    "arg1": "--off"},
+                          "noise":    { "input": ["noise","happy"],   "arg1": "--mode noise"},
+                          "quicker":    { "input": ["quicker"],   "arg1": "--interval quick"},
+                          "slower":    { "input": ["slower"],   "arg1": "--interval slow"}
+                        }
+                },
+      "Rss2speech":  {   "input":["latest news","read the news"],
+                    "output":
+                        {  
+    			                "background":true,
+                          "next" :"chat"
+                        },
+                    "nextLevel": 
+                        { 
+                          "commonOutput" : {
+                              "cmd": "/opt/ipaem/gaIpaDispatcher/rssWrapper.sh --url ARG1",
+    			                    "background":true,
+                              "feedback": "ack",
+                              "next" :"end" },
+                          "El Mundo": { "input": ["el mundo"],   "arg1": "http://estaticos.elmundo.es/elmundo/rss/portada.xml"}, 
+                          "El Pais":  { "input": ["el pais"],  "arg1": "http://ep00.epimg.net/rss/elpais/portada.xml"}, 
+                          "BBC":     { "input": ["bbc"],  "arg1": "http://feeds.bbci.co.uk/news/rss.xml"},
+                          "El Confidencial": { "input": ["confidencial","confidential"], "arg1": "https://rss.elconfidencial.com/espana/"},
+                          "cnn": { "input": ["cnn"], "arg1": "http://rss.cnn.com/rss/edition.rss"}
+                        }
+                }
+ }
+}
