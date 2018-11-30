@@ -1,0 +1,14 @@
+[Unit]
+Description= Snowboy as hotword wrapper to awake the beast GA
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/opt/PROJECT_NAME/sbHotword/ipaem.s.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+
