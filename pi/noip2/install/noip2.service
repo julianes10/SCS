@@ -1,0 +1,14 @@
+[Unit]
+Description = noip updater. Configure first, reference http://www.noip.com/support/knowledgebase/install-ip-duc-onto-raspberry-pi/
+After=network.target
+After=syslog.target
+
+[Install]
+WantedBy=multi-user.target
+Alias=noip.service
+
+[Service]
+# Start main service
+ExecStart=/usr/local/bin/noip2
+Restart=always
+Type=forking
