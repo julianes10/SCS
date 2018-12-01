@@ -115,9 +115,11 @@ if [ "$arg_dest" == "remote" ]; then
     find -L . -type f -name '*.a' -exec rm {} +
     find -L . -type f -name '*.pyc' -exec rm {} +
 
+    echo "------------------------------------------------"
     echo "Stopping services..."
     ssh -p $PI_PORT pi@$PI_IPNAME "sudo systemctl stop $SERVICES_LIST"
 
+    echo "------------------------------------------------"
     echo "Copying local files from . to $TMP_DEPLOY..."
     ssh -p $PI_PORT pi@$PI_IPNAME "sudo rm -rf $TMP_DEPLOY; mkdir -p $TMP_DEPLOY"
     export GLOBIGNORE=".git:./arduino/build-uno:./arduino/build-nano";
@@ -145,6 +147,8 @@ if [ "$arg_dest" == "remote" ]; then
        A_TTY=`awk '/ARDUINO_PORT/ {print $3}' ./arduino/Makefile`
        echo "### GOT ARDUINO PARAMS: $A_BAUD - $A_HEXPATH - $A_TTY"
        ## COPY .hex and settings for avrdude
+       echo "------------------------------------------------"
+       echo "Copying arduino binary and settings for avrdude..."
        scp -P $PI_PORT ./arduino/$A_HEXPATH $PI_USER@$PI_IPNAME:$TMP_DEPLOY
        ## Prepare for deploy .hex and settings for avrdude
        DEPLOY_ARDUINO="avrdude -q -V -D -p atmega328p -c arduino -b $A_BAUD -P $A_TTY Makefile Makefile -U flash:w:$DEPLOY_FOLDER/arduino.hex:i;"
@@ -161,7 +165,7 @@ if [ "$arg_dest" == "remote" ]; then
     DEPLOY_SERVICE="$DEPLOY_SERVICE sudo systemctl enable  $SERVICES_LIST;"
 
 
-
+    echo "------------------------------------------------"
     echo "Deploying on $DEPLOY_FOLDER, setup config, arduino, start and status..."
     ssh -p $PI_PORT pi@$PI_IPNAME "sudo rm -rf $DEPLOY_FOLDER; sudo mv $TMP_DEPLOY $DEPLOY_FOLDER; $DEPLOY_CONFIG $DEPLOY_SERVICE $DEPLOY_ARDUINO sudo systemctl start $SERVICES_LIST;sudo systemctl status $SERVICES_LIST;"
   else
@@ -173,6 +177,8 @@ else
   usage
 fi
 
+echo "------------------------------------------------"
+echo "------------------------------------------------"
 echo "Deployment finished, check message above just in case something stinks... and have fun"
 echo "  Remember cheatsheet:"
 echo "    Check status: sudo systemctl status <service>"
