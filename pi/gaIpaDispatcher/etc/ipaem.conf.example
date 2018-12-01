@@ -5,6 +5,10 @@
   "logp": { "logTraces":"/tmp/ipaemp.log",
             "logExceptions":"/tmp/ipaempe.log"
   },
+  "tools": {
+              "mute": "/opt/ipaem/kodiWrapper/kodiWrapper.sh --mute",
+              "unmute": "/opt/ipaem/kodiWrapper/kodiWrapper.sh --unmute"
+  },
   "ledStrip": { "port":"/dev/ttyUSB0",
                 "speed":"9600",
                 "timeout":10

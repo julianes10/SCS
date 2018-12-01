@@ -120,14 +120,16 @@ def runAction(cmd,bg):
 '''----------------------------------------------------------'''
 '''----------------    mute      -----------------'''
 def mute(m):
-  #pass
-  label="--mute"
-  if not m:
-    label="--unmute"
-  #LOCAL runAction("amixer -c 0 set PCM {0}".format(label),False)
-  runAction("/opt/ipaem/gaIpaDispatcher/KodiWrapper.sh {0}".format(label),False)
-
-
+ try:
+  if m:
+    runAction(configuration["tools"]["mute"],False)
+  else:
+    runAction(configuration["tools"]["unmute"],False)
+    #ALTERNATIVE runAction("amixer -c 0 set PCM {0}".format(label),False)
+ except Exception as e:
+  helper.internalLogger.warning("Error trying to mute {0}".format(m))
+  helper.einternalLogger.exception(e)  
+ return None
 
 '''----------------------------------------------------------'''
 '''----------------    getParam             -----------------'''
