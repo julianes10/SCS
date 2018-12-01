@@ -5,7 +5,7 @@
 sudo apt-get install vim
 sudo apt-get install git
 sudo apt-get install screen
-apt-get install python-pip python-dev build-essential
+sudo apt-get install python-pip python-dev build-essential
 
 
 
@@ -23,6 +23,7 @@ python -m pip install --upgrade google-assistant-library
 pip install flask
   
 ## GET YOUR CREDENTIALS FOR A SPECIFIC DEVICE
+https://developers.google.com/assistant/sdk/guides/library/python/embed/install-sample
 Go to your project, in google cloud plaform https://console.cloud.google.com
 Select a project and go to APIs and services, creentials: .ej: https://console.cloud.google.com/apis/credentials?project=testgasdk-180808
 Create new one client secrets and donwload it
