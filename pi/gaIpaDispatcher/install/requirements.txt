@@ -12,6 +12,8 @@ sudo apt-get install python-pip python-dev build-essential
 
 # ga stuff dependencies for gaIpaDispatcher:
 ## MainSourcehttps://developers.google.com/assistant/sdk/develop/python/run-sample
+## Follow this guide: https://developers.google.com/assistant/sdk/guides/library/python/embed/install-sample
+
 -----------------------------------------------------------------------------------
 sudo apt-get update
 sudo apt-get install python3-dev python3-venv
@@ -34,6 +36,9 @@ This ask to google to generate credentials, follow the link in a browser, copy "
 Other info google credentials in etc:
 # Check if needed https://developers.google.com/assistant/sdk/develop/python/config-dev-project-and-account
 Run e.g: python ./gaIpaDispatcher.py --configfile etc/ipaem.conf.example --credentials $HOME/.config/google-oauthlib-tool/credentials.json
+
+NOTE: 
+.asoundrc tuned shall be copy to /home/pi and /root , example reference in etc folder
 
 #Arduino deps
 ## To debug and develop really

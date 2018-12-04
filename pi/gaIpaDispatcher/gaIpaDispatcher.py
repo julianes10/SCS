@@ -181,10 +181,11 @@ def checkAnswer(rootActions,text,level,textStripped):
        actions=level
     
     for key,item in actions.items():
-      helper.internalLogger.debug("Trying to match {0} on action {1}".format(text,key))
+      helper.internalLogger.debug("Trying to match '{0}' on action {1}".format(text,key))
       if "input" not in item:
          continue
       for input in item['input']:
+       helper.internalLogger.debug("Trying to match input {0}".format(input))
        if text.lower() in input or input in text.lower():
          helper.internalLogger.debug("Action found over '{0}': {1}".format(text,key))
          textStripped=textStripped.replace(input,"",1)
@@ -248,7 +249,7 @@ ON_CONVERSATION_TURN_FINISHED = 9
 '''----------------       M A I N         -------------------'''
 '''----------------------------------------------------------'''
 
-def main(configfile,cred):
+def main(configfile):
   print('IPAEM-start -----------------------------')   
 
   global ga
@@ -284,12 +285,20 @@ def main(configfile,cred):
 
 
   try:
-    with open(cred, 'r') as f:
+    fcredentials=configuration["gasdk"]["credentials"]
+    device_model_id=configuration["gasdk"]["device_model_id"]
+
+    helper.internalLogger.debug("Credentials file:{0}, device model id: {1}.".format(fcredentials,device_model_id))
+    with open(fcredentials, 'r') as f:
          credentials = google.oauth2.credentials.Credentials(token=None,
                                                             **json.load(f))  
     playSound("boot")     
-    with Assistant(credentials) as assistant:
+
+
+    helper.internalLogger.debug("Calling amazing Google Assistant...")
+    with Assistant(credentials,device_model_id) as assistant:
       ### Now let's run in background alternative ways to 'ok google' speech
+      helper.internalLogger.debug("Google grant this credentials. Cool. Going on...")
       apiRestTask=threading.Thread(target=apirest_task,args=(assistant,ga,),name="theOtherTrigger")
       apiRestTask.daemon = True
       apiRestTask.start()
@@ -311,7 +320,7 @@ def main(configfile,cred):
     e = sys.exc_info()[0]
     helper.internalLogger.critical('Error: Exception unprocessed properly. Exiting')
     helper.einternalLogger.exception(e)  
-    helper.internalLogger.debug('IPAEM-General exeception captured. See ssms.log:{0}',format(cfg_log_exceptions))        
+    helper.internalLogger.debug('IPAEM-General exeception captured. See Log:{0}',format(cfg_log_exceptions))        
     loggingEnd()
 
 
@@ -339,14 +348,6 @@ def parse_args():
     parser.add_argument('--configfile', type=str, required=False,
                         default='/etc/ipaem/ipaem.conf',
                         help='Config file for ipaem service')
-    parser.add_argument('--credentials', type=existing_file,
-                        metavar='OAUTH2_CREDENTIALS_FILE',
-                        default=os.path.join(
-                            os.path.expanduser('/etc/ipaem/'),
-                            'google-oauthlib-tool',
-                            'credentials.json'
-                        ),
-                        help='Path to store and read OAuth2 credentials')
     return parser.parse_args()
 
 '''----------------------------------------------------------'''
@@ -362,4 +363,4 @@ def printPlatformInfo():
 if __name__ == '__main__':
     printPlatformInfo()
     args = parse_args()
-    main(configfile=args.configfile,cred=args.credentials)    
+    main(configfile=args.configfile)    
