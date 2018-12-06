@@ -157,13 +157,14 @@ if [ "$arg_dest" == "remote" ]; then
     DEPLOY_SERVICE=""
     for item in $SERVICES_LIST; do
       echo "Setting up service $item ... "
-      DEPLOY_SERVICE="sed -i -- 's/PROJECT_NAME/$PROJECT_NAME/g' $DEPLOY_FOLDER/$item/install/* ;"
-      DEPLOY_SERVICE="$DEPLOY_SERVICE chmod 644 $DEPLOY_FOLDER/$item/install/*.service ;"
+      DEPLOY_SERVICE="$DEPLOY_SERVICE sudo sed -i -- 's/PROJECT_NAME/$PROJECT_NAME/g' $DEPLOY_FOLDER/$item/install/* ;"
+      DEPLOY_SERVICE="$DEPLOY_SERVICE sudo chmod 644 $DEPLOY_FOLDER/$item/install/*.service ;"
       DEPLOY_SERVICE="$DEPLOY_SERVICE sudo cp -raf $DEPLOY_FOLDER/$item/install/*  /lib/systemd/system/;"
     done
     DEPLOY_SERVICE="$DEPLOY_SERVICE sudo systemctl daemon-reload;"
     DEPLOY_SERVICE="$DEPLOY_SERVICE sudo systemctl enable  $SERVICES_LIST;"
 
+    #echo "DEBUG ------------------: $DEPLOY_SERVICE ... "
 
     echo "------------------------------------------------"
     echo "Deploying on $DEPLOY_FOLDER, setup config, arduino, start and status..."
