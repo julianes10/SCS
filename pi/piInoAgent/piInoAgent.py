@@ -111,6 +111,16 @@ def post_misc():
     arduinoSerial.flush()
     return rt, 201
 
+@api.route('/api/v1.0/ls/raw', methods=['POST'])
+def post_raw():
+    rt=jsonify({'result': 'OK'})
+    if not request.json or not 'raw' in request.json:
+        abort(400)
+    arduinoSerial.sendRaw(request.json['raw']) 
+    arduinoSerial.flush()
+    return rt, 201
+
+
 '''--------- CE CE CE CE CE CE ------------------------------ '''
 
 @api.route('/api/v1.0/ce/mode', methods=['POST'])

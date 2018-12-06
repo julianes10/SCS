@@ -122,6 +122,12 @@ class serialWrapper():
       helper.internalLogger.debug("Ask status") 
       self.buffer+=":"+device+"S"
 
+
+    def sendRaw(self,c):
+      helper.internalLogger.debug("Raw command: {0}".format(c)) 
+      self.buffer+=str(c)
+
+
     ''' ---- specific LS commands ------ '''
 
     def sendLSColor(self,color):
@@ -138,6 +144,7 @@ class serialWrapper():
     def sendLSPause(self,t):
       helper.internalLogger.debug("Setup Pause: {0}".format(t)) 
       self.buffer+=":LP"+str(t).zfill(4)
+
 
 
 

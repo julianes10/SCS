@@ -8,7 +8,7 @@ function usage
   echo  "$0 
            --color <COLOR>
            --on
-           --mode <fullcolor|rolling|rainbow|noise|knightRider>
+           --mode <fullColor|rolling|rainbow|noise|knightRider>
            --off   
            --pause <quicker|slower>
            --help"
@@ -47,7 +47,7 @@ function setMode
             exit 1
        esac
 
-  curl -i -H "Content-Type: application/json" -X POST -d '{"mode":"'$m'","color":"'$c'","pause":'$p',"timeout":'$t'}' http://localhost:5001/ipaem/api/v1.0/misc
+  curl -i -H "Content-Type: application/json" -X POST -d '{"mode":"'$m'","color":"'$c'","pause":'$p',"timeout":'$t'}' http://localhost:5001/api/v1.0/ls/misc
   echo $t >/tmp/pinoAgent.t
   echo $p >/tmp/pinoAgent.p
 
@@ -77,14 +77,14 @@ function setPause
   echo $p >/tmp/pinoAgent.p
 
   echo $"Setting up pause from \"$p0\" to: \"$p\"..."
-  curl -i -H "Content-Type: application/json" -X POST -d '{"pause":'$p'}' http://localhost:5001/ipaem/api/v1.0/pause
+  curl -i -H "Content-Type: application/json" -X POST -d '{"pause":'$p'}' http://localhost:5001/api/v1.0/ls/pause
 } 
 
 ################################################
 function setColor 
 {
   echo "Setting up main color in led strip: \"$1\"..."
-  curl -i -H "Content-Type: application/json" -X POST -d '{"color":"'$1'"}' http://localhost:5001/ipaem/api/v1.0/color
+  curl -i -H "Content-Type: application/json" -X POST -d '{"color":"'$1'"}' http://localhost:5001/api/v1.0/ls/color
 } 
 
 ################################################
@@ -97,7 +97,7 @@ function turnOn
 function turnOff 
 {
   echo "Turning off led strip..."
-  curl -i -H "Content-Type: application/json" -X POST -d '{"reset":true}' http://localhost:5001/ipaem/api/v1.0/reset
+  curl -i -H "Content-Type: application/json" -X POST -d '{"reset":true}' http://localhost:5001/api/v1.0/ls/reset
 } 
 
 ################################################
