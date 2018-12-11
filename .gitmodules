@@ -4,3 +4,6 @@
 [submodule "arduino/SimpleTimer"]
 	path = arduino/SimpleTimer
 	url = https://github.com/schinken/SimpleTimer.git
+[submodule "arduino/Ultrasonic"]
+	path = arduino/Ultrasonic
+	url = https://github.com/ErickSimoes/Ultrasonic.git

@@ -56,6 +56,7 @@ void LSEM::refresh(void)
     case LS_MODE_ONE:            _doOne();           break;
     case LS_MODE_RAINBOW:        _doRainbow();       break;
     case LS_MODE_NOISE:          _doNoise();         break;
+    case LS_MODE_NOISE_WHITE:    _doNoiseWhite();         break;
     case LS_MODE_KNIGHT_RIDER:   _doRollingColor(_color,false,true); break;
     case LS_MODE_RKNIGHT_RIDER:  _doRollingColor(_color,true,true); break;  
     case LS_MODE_PATTERNS:       _doPatterns();      break;
@@ -131,6 +132,26 @@ void LSEM::setPattern(uint8_t pos,CRGB *p)
 
 }
 
+//------------------------------------------------
+void LSEM::_setPatternDef(uint8_t pos, uint8_t mode, CRGB *p, int max)
+{
+/*  
+
+       case LS_PATTERN_DEF_ZOOM:
+          case LS_PATTERN_DEF_MOSAIC:
+            int i=0;
+            while ((len-(index+10)) <0) && cmd[index++] ! ":"){
+              pos[i]   = (uint8_t)strtol(&cmd[index],kk,10));
+              index+=2;
+              color[i] = _getColor(&cmd[index]);
+              index+=8;
+              i++;
+            }
+            _setPatternDef(pat,patMode,pos,color,i);
+
+  _patternsList[pos]=p;
+*/
+}
 
 //-------------------------------------------------
 //-------------------------------------------------
@@ -142,8 +163,9 @@ uint8_t LSEM::_readSerialCommand(char *cmd) {
   uint8_t index=0;
   uint8_t len=0;
   uint32_t color=0;
-  int br=0,bg=0,bb=0;
   char **kk=0;
+  CRGB colorPat[10];
+  uint8_t pat,patMode;
 
   len=strlen(cmd);
   if (_debug){Serial.print(F("DEBUG: Parsing:")); Serial.println(cmd);  }
@@ -162,14 +184,8 @@ uint8_t LSEM::_readSerialCommand(char *cmd) {
     case LS_COLOR:
       if ((len-(index+8)) <0) {if (_debug){Serial.println(F("DEBUG: incomplete ls_color"));} goto exitingCmd;}
       if (_debug){Serial.print(F("DEBUG: new LS color:"));}
-      sscanf(&cmd[index],"%X",&br); index+=3;
-      sscanf(&cmd[index],"%X",&bg); index+=3;
-      sscanf(&cmd[index],"%X",&bb); index+=2;
-      //Serial.print(F("DEBUG:");Serial.print(br,HEX);Serial.print(bg,HEX);Serial.print(bb,HEX);
-      color=(uint32_t) ( 
-                        (((long int)(br))<<16 ) | 
-                        (((long int)(bg))<<8)   | 
-                        ((long int)(bb))  );
+      color=_readColor(&cmd[index]);
+      index+=8;
       _setColor(color);
       break;
     case LS_TIMEOUT:
@@ -196,6 +212,26 @@ uint8_t LSEM::_readSerialCommand(char *cmd) {
     case LS_STATUS_REQ:
       _debugInfo();
       break;
+    case LS_PATTERN:
+      //:Lp00 Z89,89,77 55,88,99 ...
+      if ((len-(index+2)) <0) {if (_debug){Serial.println(F("DEBUG: incomplete ls_mode_one"));} goto exitingCmd;}
+        pat=(uint8_t)strtol(&cmd[index],kk,10);
+        index+=3;
+        patMode=cmd[index];
+        index+=1;
+        switch(patMode){
+          case LS_PATTERN_DEF_ZOOM:
+          case LS_PATTERN_DEF_MOSAIC:
+            int i=0;
+            while (((len-(index+10)) <0) && (cmd[index++] != ':')){
+              colorPat[i] = _readColor(&cmd[index]);
+              index+=8;
+              if (cmd[index]==' ') index+=1;
+              i++;
+            }
+            _setPatternDef(pat,patMode,colorPat,i);
+        };
+      break;
     case LS_MODE:
       m=cmd[index++];
       bk=_getMode();
@@ -204,6 +240,7 @@ uint8_t LSEM::_readSerialCommand(char *cmd) {
           case LS_MODE_RAINBOW:
           case LS_MODE_COLOR:
           case LS_MODE_NOISE:
+          case LS_MODE_NOISE_WHITE:
           case LS_MODE_ROLLING_TEST:
           case LS_MODE_RROLLING_TEST:
           case LS_MODE_ROLLING_COLOR:
@@ -237,7 +274,23 @@ return index;
 }
 
 
+//------------------------------------------------
+uint32_t LSEM::_readColor(char *cmd)
+{
+  uint32_t rt=0;
+  int br=0,bg=0,bb=0;
+  int index=0;
 
+  sscanf(&cmd[index],"%X",&br); index+=3;
+  sscanf(&cmd[index],"%X",&bg); index+=3;
+  sscanf(&cmd[index],"%X",&bb); index+=2;
+  //Serial.print(F("DEBUG:");Serial.print(br,HEX);Serial.print(bg,HEX);Serial.print(bb,HEX);
+  rt=(uint32_t) ( 
+                        (((long int)(br))<<16 ) | 
+                        (((long int)(bg))<<8)   | 
+                        ((long int)(bb))  );
+  return rt;
+}
 //------------------------------------------------
 void LSEM::_fullReset(void)
 {
@@ -394,14 +447,6 @@ void LSEM::_doRainbow()
 //------------------------------------------------
 void LSEM::_doNoise()
 { 
-/*  uint8_t br,bg,bb;
-
-random(max)
-
-  color=(uint32_t) ( 
-                     (((long int)(br))<<16 ) | 
-                     (((long int)(bg))<<8)   | 
-                     ((long int)(bb))  );*/
   if (!_pauseExpired) return;
   for (int i=0;i<_NUM_LEDS;i++)
   {
@@ -410,7 +455,20 @@ random(max)
   _pauseExpired=false;
 }
 
+//------------------------------------------------
+void LSEM::_doNoiseWhite()
+{ 
+  if (!_pauseExpired) return;
 
+  for (int i=0;i<_NUM_LEDS;i++)
+  {
+    _leds[i] = 0;
+    if (random(10)%2 == 0){
+      _leds[i] = 0xFFFFFF;
+    }
+  }
+  _pauseExpired=false;
+}
 //------------------------------------------------
 void LSEM::_doPatterns()
 { 

@@ -39,10 +39,16 @@ TYPES:
                                        //  e.g 00 or 40. With general settings: C,T,P.
     #define LS_MODE_RAINBOW        'W'  //rainbow. With general settings: T.
     #define LS_MODE_NOISE          'N'  //rainbow. With general settings: T,P
+    #define LS_MODE_NOISE_WHITE    'n'  //rainbow. With general settings: T,P
     #define LS_MODE_KNIGHT_RIDER   'K'  //knight rider effect. With general settings: T,P,C
     #define LS_MODE_RKNIGHT_RIDER  'k'  //reverse knight rider effect. With general settings: T,P,C
-    #define LS_MODE_PATTERNS       'P'  //put configured patters VALUE:LED_POSITION 2 ascii decimal. With general settings: T,P
+    #define LS_MODE_PATTERNS       'P'  //put configured patters VALUE:POSITION 2 ascii decimal. With general settings: T,P
   #define LS_ENQUEUE 'Q'  // Enqueue the rest of the line commands to play when timeout current mode.
+
+  #define LS_PATTERN    'p'  // (pattern operation) over position POSITION 2 ascii decimal,COLOR0,COLOR1,COLOR...
+    #define LS_PATTERN_DEF_ZOOM        'Z'  // N leds, later zoom in strip
+    #define LS_PATTERN_DEF_MOSAIC      'M'  // N leds, later mosaic in strip
+
 
 
 class LSEM
@@ -111,8 +117,12 @@ class LSEM
   void _doColor();
   void _doRainbow();
   void _doNoise();
+  void _doNoiseWhite();
   void _doPatterns();
   void _setAllLeds(CRGB color);
+  void _setPatternDef(uint8_t pos, uint8_t mode, CRGB *p, int max);
+  uint32_t _readColor(char *cmd);
+
 };
 
 //extern class LSEM LSEM;

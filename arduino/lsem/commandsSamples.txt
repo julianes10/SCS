@@ -33,3 +33,25 @@
 :LT0030:LMA:LC35,33,ff
 
 :LT0030:LM1:LC11,DD,99
+
+
+# Paterns
+# Setup mode with 3 patterns
+:LMP03
+# Setup first pattern: full color: pattern 00,  color af,ac,ab
+:Lp00,Z,af,ac,ab
+# Setup first pattern: flag 3 colors : pattern 00,  color af,ac,ab , cccccc, dddddd
+:Lp00Zaf,ac,ab,cccccc,ddddd
+# Setup third pattern: base pattern 02 changign item by item: pattern 05, posicion , color 005566, posicion 01 996633
+:Lp02C020588,88,88....
+# Setup pattern 00 shifting 6 position to right
+:Lp00SR06
+# Setup pattern 00 shifting 6 position to left
+:Lp00SL06
+# Setup pattern 00 shifting & rolling 6 position to right
+:Lp00RR06
+# Setup pattern 00 shifting & rolling 6 position to left
+:Lp00RL06
+
+
+
