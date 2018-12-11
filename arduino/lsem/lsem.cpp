@@ -56,7 +56,7 @@ void LSEM::refresh(void)
     case LS_MODE_ONE:            _doOne();           break;
     case LS_MODE_RAINBOW:        _doRainbow();       break;
     case LS_MODE_NOISE:          _doNoise();         break;
-    case LS_MODE_NOISE_WHITE:    _doNoiseWhite();         break;
+    case LS_MODE_NOISE_COLOR:    _doNoiseColor();         break;
     case LS_MODE_KNIGHT_RIDER:   _doRollingColor(_color,false,true); break;
     case LS_MODE_RKNIGHT_RIDER:  _doRollingColor(_color,true,true); break;  
     case LS_MODE_PATTERNS:       _doPatterns();      break;
@@ -109,6 +109,7 @@ void LSEM::reset(void)
   _timerPause=-1;
   _timeout=0; //T
   _pause=0;   //P
+  _percentage=0;
 
   for (int i=0;i<MAX_PATTERNS;i++)
     _patternsList[i]=0;
@@ -193,6 +194,11 @@ uint8_t LSEM::_readSerialCommand(char *cmd) {
       _setTimeout((uint16_t)strtol(&cmd[index],kk,10));
       index+=4;
       break;
+    case LS_PERCENTAGE:
+      if ((len-(index+4)) <0) {if (_debug){Serial.println(F("DEBUG: incomplete ls_timeout"));} goto exitingCmd;}
+      _setPercentage((uint16_t)strtol(&cmd[index],kk,10));
+      index+=4;
+      break;
     case LS_PAUSE:
       if ((len-(index+4)) <0) {if (_debug){Serial.println(F("DEBUG: incomplete ls_timeout"));} goto exitingCmd;}
       _setPause((uint16_t)strtol(&cmd[index],kk,10));
@@ -240,7 +246,7 @@ uint8_t LSEM::_readSerialCommand(char *cmd) {
           case LS_MODE_RAINBOW:
           case LS_MODE_COLOR:
           case LS_MODE_NOISE:
-          case LS_MODE_NOISE_WHITE:
+          case LS_MODE_NOISE_COLOR:
           case LS_MODE_ROLLING_TEST:
           case LS_MODE_RROLLING_TEST:
           case LS_MODE_ROLLING_COLOR:
@@ -322,6 +328,14 @@ void LSEM::_setTimeout(uint16_t t)
       Serial.println(_timerTimeout);
     }
   }
+}
+//------------------------------------------------
+void LSEM::_setPercentage(uint16_t p)
+{
+  _percentage=p;
+  if (p>100)
+   _percentage=100;
+
 }
 //------------------------------------------------
 void LSEM::_setPause(uint16_t t)
@@ -456,15 +470,16 @@ void LSEM::_doNoise()
 }
 
 //------------------------------------------------
-void LSEM::_doNoiseWhite()
+void LSEM::_doNoiseColor()
 { 
   if (!_pauseExpired) return;
 
   for (int i=0;i<_NUM_LEDS;i++)
   {
     _leds[i] = 0;
-    if (random(10)%2 == 0){
-      _leds[i] = 0xFFFFFF;
+
+    if (random(100)>_percentage){
+      _leds[i] = _color;
     }
   }
   _pauseExpired=false;
@@ -491,6 +506,7 @@ void LSEM::_debugInfo()
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("M"); Serial.print(_mode);
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("T"); Serial.print(_timeout);
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("P"); Serial.print(_pause);
+  Serial.print(":");Serial.print(_ProtocolId);Serial.print(LS_PERCENTAGE); Serial.print(_percentage);
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("C"); Serial.print((long int)_color);
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("MP"); Serial.print((uint8_t)_maxPatterns);
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("q"); Serial.print(_queue.count());

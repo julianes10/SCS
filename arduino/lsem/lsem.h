@@ -24,6 +24,8 @@ TYPES:
                           //    e.g 0300, 30 seconds. Default 0 NO timeout
   #define LS_PAUSE   'P'  // (pause)   with VALUE:MS in 4 ascii in decs of seconds filled with zeors 
                           //    e.g 4000, 4  seconds. Default 0 no pause
+  #define LS_PERCENTAGE 'G'  // (percentage) 0-100%  4 ascii  filled with zeors 
+                          //    e.g 0050, 50 %. Default 0 no impact.
   #define LS_DEBUG_ON  'D'// Enable debug
   #define LS_DEBUG_OFF 'd' // Disable debug
   #define LS_STATUS_REQ 'S'  // Ask for status information over this serial protocol answer TODO spec output
@@ -38,8 +40,8 @@ TYPES:
     #define LS_MODE_ONE            'O'  //(1 led bit change) with VALUE:LED_POSITION 2 ascii decimal 
                                        //  e.g 00 or 40. With general settings: C,T,P.
     #define LS_MODE_RAINBOW        'W'  //rainbow. With general settings: T.
-    #define LS_MODE_NOISE          'N'  //rainbow. With general settings: T,P
-    #define LS_MODE_NOISE_WHITE    'n'  //rainbow. With general settings: T,P
+    #define LS_MODE_NOISE          'N'  //random leds random color. With general settings: T,P
+    #define LS_MODE_NOISE_COLOR    'n'  //random leds fixed color. With general settings: T,P,C
     #define LS_MODE_KNIGHT_RIDER   'K'  //knight rider effect. With general settings: T,P,C
     #define LS_MODE_RKNIGHT_RIDER  'k'  //reverse knight rider effect. With general settings: T,P,C
     #define LS_MODE_PATTERNS       'P'  //put configured patters VALUE:POSITION 2 ascii decimal. With general settings: T,P
@@ -93,6 +95,7 @@ class LSEM
   int  _pause; //P
   int  _timerTimeout; 
   int  _timerPause; 
+  int  _percentage; 
   bool _timeoutExpired;
   bool _pauseExpired;
 
@@ -107,6 +110,7 @@ class LSEM
   void _setMaxPatterns(uint8_t p){ _maxPatterns=p; }
   void _setTimeout(uint16_t t);
   void _setPause(uint16_t p);
+  void _setPercentage(uint16_t p);
   void _resetQueue();
   void _fullReset();
   uint8_t _readSerialCommand(char *cmd);
@@ -117,7 +121,7 @@ class LSEM
   void _doColor();
   void _doRainbow();
   void _doNoise();
-  void _doNoiseWhite();
+  void _doNoiseColor();
   void _doPatterns();
   void _setAllLeds(CRGB color);
   void _setPatternDef(uint8_t pos, uint8_t mode, CRGB *p, int max);
