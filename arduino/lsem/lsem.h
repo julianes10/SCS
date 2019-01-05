@@ -61,7 +61,7 @@ class LSEM
   void refresh();
 
   void reset();
-  void processCommands(char *inputString);
+  int processCommands(char *inputString);
   bool isIdle(){return ((_mode==LS_MODE_ZERO) && (_queue.count()==0)); }
 
   void callbackTimeout();
@@ -113,7 +113,7 @@ class LSEM
   void _setPercentage(uint16_t p);
   void _resetQueue();
   void _fullReset();
-  uint8_t _readSerialCommand(char *cmd);
+  uint8_t _readSerialCommand(char *cmd,int *pok);
   void _debugInfo();
   void _doRollingTest(bool reverse=false);
   void _doRollingColor(CRGB color,bool reverse=false,bool knightRider=false);

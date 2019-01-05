@@ -66,26 +66,36 @@ void LSEM::refresh(void)
 }
 
 //------------------------------------------------
-void LSEM::processCommands(char *inputString)
+int LSEM::processCommands(char *inputString)
 {
   int index=0,readbytes=0;
-  int len=0;
+  int len=0; 
+  int rt=0;
+  int processedOK=0;
   //Serial.print(F("DEBUG:")); Serial.println(inputString);
-
   len=strlen(inputString);
   while ((len-index) >0)
   { 
-    char *subcmd=0; 
-    subcmd=strchr(inputString,':');
-    if (subcmd==0) {
+    //One loop for each command starting with ':'
+
+    //Removing heading commands
+    while ((len-index) >0) {
+      if (inputString[index]==':')  break;
+      if (_debug){ Serial.println(F("DEBUG: removing heading garbage"));}
+      index++;      
+    }
+
+    // Extra checking
+    if ((len-index) <=0) {
       if (_debug){ Serial.println(F("DEBUG: no more comands in the line"));}
       break;
-    }
-    index++; 
-    readbytes=_readSerialCommand(&inputString[index]);
+    }    
+    index++; //skipping ':' itself
+    readbytes=_readSerialCommand(&inputString[index],&processedOK);
     index+=readbytes;  
+    rt+=processedOK;
   }
-
+  return rt;
 }
 
 //------------------------------------------------
@@ -159,7 +169,7 @@ void LSEM::_setPatternDef(uint8_t pos, uint8_t mode, CRGB *p, int max)
 //-------------------------------------------------
 //-------------------------------------------------
 
-uint8_t LSEM::_readSerialCommand(char *cmd) {
+uint8_t LSEM::_readSerialCommand(char *cmd,int *pok) {
   char m=0,bk=0;
   uint8_t index=0;
   uint8_t len=0;
@@ -167,14 +177,16 @@ uint8_t LSEM::_readSerialCommand(char *cmd) {
   char **kk=0;
   CRGB colorPat[10];
   uint8_t pat,patMode;
+  *pok=0;
 
   len=strlen(cmd);
   if (_debug){Serial.print(F("DEBUG: Parsing:")); Serial.println(cmd);  }
 
-  if (cmd[index++] != _ProtocolId){
+  if (cmd[index] != _ProtocolId){
     if (_debug){Serial.println(F("DEBUG: PROTOCOL unexpected type"));} 
     goto exitingCmd;
   }
+  index++;
 
   if ((len-index) <=0)  {if (_debug){Serial.println(F("DEBUG: incomplete led command"));} goto exitingCmd;}
 
@@ -274,7 +286,7 @@ uint8_t LSEM::_readSerialCommand(char *cmd) {
     
 
 if (_debug){Serial.println(F("DEBUG: Command processed successfully"));}
-
+*pok=1;
 exitingCmd:;
 return index;
 }
