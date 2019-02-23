@@ -1,0 +1,9 @@
+{
+  "log": { "logTraces":"/tmp/timelapse.log",
+           "logExceptions":"/tmp/timelapsee.log"
+  },
+  "polling-interval":2,
+  "projectDB":"/tmp/timelapse.db",
+  "mediaPath":"/tmp/timelapse.media"
+
+}
