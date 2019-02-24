@@ -13,15 +13,15 @@ import helper
 from random import randint
 import re
 import random
+import shutil
 
 
-lastPictureTime = 0
 
 def getVersion():
    rt={}
    try:
-     if "vsw-file" in configuration:
-       with open(configuration["vsw-file"]) as json_data:
+     if "vsw-file" in GLB_configuration:
+       with open(GLB_configuration["vsw-file"]) as json_data:
           rt=json.load(json_data)
    except Exception as e:
         helper.internalLogger.error('no vsw json data')
@@ -35,6 +35,23 @@ from helper import *
 
 
 '''----------------------------------------------------------'''
+def getDirSize(start_path = '.'):
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(start_path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
+
+def getFreeDiskSize(path = '.'):
+    rt = 0
+    statvfs = os.statvfs(path)
+    #statvfs.f_frsize * statvfs.f_blocks     # Size of filesystem in bytes
+    #rt=statvfs.f_frsize * statvfs.f_bfree      # Actual number of free bytes
+    rt=statvfs.f_frsize * statvfs.f_bavail     # Number of free bytes that ordinary users
+    return rt
+
+'''----------------------------------------------------------'''
 '''----------------      API REST         -------------------'''
 '''----------------------------------------------------------'''
 api = Flask("api")
@@ -42,7 +59,21 @@ api = Flask("api")
 
 @api.route('/api/v1.0/timelapse/status', methods=['GET'])
 def get_timelapse_status():
-  return rtjson
+    rt={}
+    rt['projects']=GLB_projects      
+    rt['ongoing']=GLB_ongoing       
+
+    rt['disk']={'totalFree': 0,'projects':0,'ongoing':0}
+    rt['disk']['projects']=getDirSize(GLB_configuration["mediaPath"])
+    rt['disk']['totalFree']=getFreeDiskSize(GLB_configuration["mediaPath"])
+ 
+    if "name" in GLB_ongoing:
+      rt['disk']['ongoing']=getDirSize(GLB_configuration["mediaPath"]+"/"+GLB_ongoing["name"])
+      
+
+
+    rtjson=json.dumps(rt)
+    return rtjson
 
 @api.route('/api/v1.0/timelapse/project', methods=['POST'])
 def post_timelapse_tracker():
@@ -51,70 +82,170 @@ def post_timelapse_tracker():
         abort(400)
     abort(400)
 '''
-    if "auto-tracker" in configuration:
-      if "what" in configuration["auto-tracker"]:
-        with open(configuration["auto-tracker"]["what"], 'w') as outfile:
+    if "auto-tracker" in GLB_configuration:
+      if "what" in GLB_configuration["auto-tracker"]:
+        with open(GLB_configuration["auto-tracker"]["what"], 'w') as outfile:
           json.dump(request.json, outfile)
           return rt, 201
 '''
 
 
-
-
 '''----------------------------------------------------------'''
-'''----------------       checkOngoingPrj    -------------------'''
+'''--------    updateProjectsWithOngoing    -----------------'''
 '''----------------------------------------------------------'''
-
-def checkOngoingPrj(c):
-
-  ''' helper.internalLogger.debug("Tracker: checkOngoingPrj...")
-  '''
-  if not "interval"  in c:
-    return 
-
-  global lastPictureTime
-
-  now=time.time()
-  if lastPictureTime == 0 or lastPictureTime + c["interval"] < now:
-    lastPictureTime=now
-    #TODO MAKEFOTO
-    path=configuration["mediaPath"]+"/"+c["name"]
-    pathfile=path+"/"+c["name"]+"."+str(lastPictureTime)
-    try:
-        os.makedirs(path)
-    except FileExistsError:
-        # directory already exists
-        pass
-    helper.internalLogger.debug("Tracker: Project {0}, taking photo:".format(pathfile))
-    # mencoder mf://*.jpg -mf w=1920:h=1080:fps=25:type=jpg -ovc lavc -lavcopts vcodec=msmpeg4v2:vbitrate=16000:keyint=15:mbd=2:trell -oac copy -o output.avi.
-
-
-'''----------------------------------------------------------'''
-'''----------------       pollProjects    -------------------'''
-'''----------------------------------------------------------'''
-
-def pollProjects():
-
-
+def updateProjectsWithOngoing():
+  global GLB_projects 
+  global GLB_ongoing 
 
   try:
-    if "projectDB" in configuration:
-      with open(configuration["projectDB"]) as json_data:
-        projects = json.load(json_data)
+    if "projectDB" in GLB_configuration:
+      with open(GLB_configuration["projectDB"]) as json_data:
+        GLB_projects = json.load(json_data)
     else:
-      helper.internalLogger.debug("Tracker: No projects DB found...")
-      return
+      helper.internalLogger.debug("No GLB_projects DB found...")
+      GLB_projects=[]
 
   except Exception as e:
-    helper.internalLogger.critical("Error processing configuration json {0} file. Exiting".format(configuration["projectDB"]))
+    helper.internalLogger.critical("Error processing GLB_configuration json {0} file. Trunking file".format(GLB_configuration["projectDB"]))
     helper.einternalLogger.exception(e)
-    return 
+    GLB_projects=[]
+    
 
-  for c in projects:
+  #clean up other ongoing temps.
+  for c in GLB_projects:
     if "status" in c and "name" in c:
-      helper.internalLogger.debug("Tracker: Checking status of project {0}:{1}".format(c['name'],c['status']))
+      helper.internalLogger.debug("Checking status of project {0}:{1}".format(c['name'],c['status']))
       if c["status"] == "ONGOING":
-        checkOngoingPrj(c) 
+        helper.internalLogger.debug("Removing project {0}:{1}".format(c['name'],c['status']))
+        GLB_projects.remove(c)
+
+  helper.internalLogger.debug("Adding project {0}:{1}".format(GLB_ongoing['name'],GLB_ongoing['status']))
+  GLB_projects.append(GLB_ongoing)
+
+  with open(GLB_configuration["projectDB"], 'w') as fp:
+    json.dump(GLB_projects, fp)
+
+
+'''----------------------------------------------------------'''
+'''----------------       generateVideo    -------------------'''
+'''----------------------------------------------------------'''
+def generateVideo(cleanUp,closeOngoing):
+  global GLB_ongoing
+  pathPictures =GLB_configuration["mediaPath"]+"/"+GLB_ongoing["name"]+"/pictures"
+  pathVideo=GLB_configuration["mediaPath"]+"/"+GLB_ongoing["name"]+"/video"
+  pathFileVideo=pathVideo + "/"+GLB_ongoing["name"]+".avi"
+
+  try:
+      os.makedirs(pathVideo)
+  except FileExistsError:
+      # directory already exists
+      pass
+
+  helper.internalLogger.debug("Project {0}, generating video:".format(pathFileVideo))
+  cmd=GLB_configuration["createVideoCmd"].replace("PARAMETER_INPUTFOLDER",pathPictures)
+  cmd=cmd.replace("PARAMETER_OUTFILE",pathFileVideo)
+  helper.internalLogger.debug("Project {0}, generating video CMD:".format(cmd))
+  subprocess.call(['bash','-c',cmd]) 
+
+  if closeOngoing:
+    GLB_ongoing["status"]="DONE"
+    GLB_ongoing["video"]=pathFileVideo
+    updateProjectsWithOngoing()
+    GLB_ongoing={}
+  else:
+    # keep ongoing
+    GLB_ongoing["video"]="PART."+pathFileVideo  
+    updateProjectsWithOngoing()
+
+  if cleanUp:
+    shutil.rmtree(pathPictures) 
+
+
+'''----------------------------------------------------------'''
+'''----------------       updateOngoing   -------------------'''
+'''----------------------------------------------------------'''
+def updateOngoing():
+
+  global GLB_ongoing
+  #helper.internalLogger.critical("updateOngoing: {0}",format(GLB_ongoing.dumps()))
+  if not "interval" in GLB_ongoing:
+    return False
+
+  now=time.time()
+
+  if not  "firstPictureTime" in GLB_ongoing:
+    GLB_ongoing["firstPictureTime"] = now
+    GLB_ongoing["lastPictureTime"]  = 0
+    GLB_ongoing["nbrOfPictures"] = 0
+
+
+  if  (GLB_ongoing["firstPictureTime"] == now
+      or GLB_ongoing["lastPictureTime"] + GLB_ongoing["interval"] > now):
+    return False
+
+  #if still here, it's time to take a picture
+  GLB_ongoing["lastPictureTime"]=now
+  GLB_ongoing["nbrOfPictures"]=GLB_ongoing["nbrOfPictures"]+1
+  path=GLB_configuration["mediaPath"]+"/"+GLB_ongoing["name"]+"/pictures"
+  pathfile=path+"/"+GLB_ongoing["name"]+"."+str(now)+".jpg"
+  try:
+        os.makedirs(path)
+  except FileExistsError:
+        # directory already exists
+        pass
+
+  helper.internalLogger.debug("Ongoing {0}, taking photo:{1}".format(GLB_ongoing["name"],pathfile))
+  cmd=GLB_configuration["takePhotoCmd"].replace("PARAMETER_OUTFILE",pathfile)
+  subprocess.call(['bash','-c',cmd])
+
+
+  # It may terminate by date or number of pictures
+  if "maxNbrOfPictures" in GLB_ongoing:
+    if GLB_ongoing["nbrOfPictures"] >= GLB_ongoing["maxNbrOfPictures"]:
+      helper.internalLogger.debug("Generating video, max nbr of picture reached {0}:".format(GLB_ongoing["maxNbrOfPictures"]))
+      generateVideo(True,True)
+      return
+
+  if "maxTime" in GLB_ongoing:
+    if GLB_ongoing["firstPictureTime"] + GLB_ongoing["maxTime"] >= now:
+      helper.internalLogger.debug("Generating video, max time timelapsing reached {0}:".format(GLB_ongoing["maxTime"]))
+      generateVideo(True,True)
+      return
+
+'''----------------------------------------------------------'''
+'''----------------       updateProjects   -------------------'''
+'''----------------------------------------------------------'''
+
+
+'''----------------------------------------------------------'''
+'''----------------      pollOngoing      -------------------'''
+'''----------------------------------------------------------'''
+
+def pollOngoing():
+
+  global GLB_projects 
+  global GLB_ongoing 
+
+  global firstPolling
+
+  if not any(GLB_ongoing) and firstPolling:
+    firstPolling=False
+    try:
+      #NOTE: BELOW IS ONLY A HACK FOR TESTING WITHOUT REST POST
+      if "ongoingDB" in GLB_configuration:
+        with open(GLB_configuration["ongoingDB"]) as json_data:
+          GLB_ongoing  = json.load(json_data)
+      else:
+        helper.internalLogger.debug("No ongoingDB found...")
+        return
+
+    except Exception as e:
+      helper.internalLogger.critical("Error processing GLB_configuration json {0} file. Exiting".format(GLB_configuration["ongoingDB"]))
+      helper.einternalLogger.exception(e)
+      return 
+
+  updateOngoing()
+
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
@@ -128,29 +259,39 @@ def main(configfile):
   cfg_log_traces="timelapse.log"
   cfg_log_exceptions="timelapsee.log"
   cfg_SensorsDirectory={}
+
+
+  global GLB_configuration
+  global GLB_ongoing
+  global GLB_projects
+  global firstPolling
+ 
+  firstPolling=True
+
+  GLB_projects=[]
+  GLB_ongoing={}
+
   # Let's fetch data
-  global configuration
-  configuration={}
+  GLB_configuration={}
   with open(configfile) as json_data:
-      configuration = json.load(json_data)
+      GLB_configuration = json.load(json_data)
   #Get log names
-  if "log" in configuration:
-      if "logTraces" in configuration["log"]:
-        cfg_log_traces = configuration["log"]["logTraces"]
-      if "logExceptions" in configuration["log"]:
-        cfg_log_exceptions = configuration["log"]["logExceptions"]
+  if "log" in GLB_configuration:
+      if "logTraces" in GLB_configuration["log"]:
+        cfg_log_traces = GLB_configuration["log"]["logTraces"]
+      if "logExceptions" in GLB_configuration["log"]:
+        cfg_log_exceptions = GLB_configuration["log"]["logExceptions"]
   helper.init(cfg_log_traces,cfg_log_exceptions)
   print('See logs traces in: {0} and exeptions in: {1}-----------'.format(cfg_log_traces,cfg_log_exceptions))  
   helper.internalLogger.critical('timelapse-start -------------------------------')  
   helper.einternalLogger.critical('timelapse-start -------------------------------')
 
 
-  global lastPictureTime
-  lastPictureTime = 0
 
 
-  if "polling-interval" in configuration:
-      pollingInterval=configuration["polling-interval"]
+
+  if "polling-interval" in GLB_configuration:
+      pollingInterval=GLB_configuration["polling-interval"]
 
 
   try:
@@ -160,7 +301,7 @@ def main(configfile):
     apiRestTask.start()
 
   except Exception as e:
-    helper.internalLogger.critical("Error processing configuration json {0} file. Exiting".format(configfile))
+    helper.internalLogger.critical("Error processing GLB_configuration json {0} file. Exiting".format(configfile))
     helper.einternalLogger.exception(e)
     loggingEnd()
     return  
@@ -168,8 +309,8 @@ def main(configfile):
   try:    
 
      while True:
-
-       pollProjects()
+       helper.internalLogger.critical("Polling")
+       pollOngoing()
        time.sleep(pollingInterval)
 
 
@@ -183,7 +324,7 @@ def main(configfile):
 '''----------------------------------------------------------'''
 '''----------------     apirest_task      -------------------'''
 def apirest_task():
-  api.run(debug=True, use_reloader=False,port=5060,host='0.0.0.0')
+  api.run(debug=True, use_reloader=False,port=GLB_configuration["port"],host=GLB_configuration["host"])
 
 
 '''----------------------------------------------------------'''
