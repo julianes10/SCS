@@ -35,6 +35,40 @@ from helper import *
 
 
 '''----------------------------------------------------------'''
+def LOCK():
+  global GLB_configuration 
+  rt = {}
+  if not "ongoingDB" in GLB_configuration:
+    return rt
+
+  p=GLB_configuration["ongoingDB"]+".lock"
+  while os.path.exists(p):
+    time.sleep(1)
+  # create the lock file
+  lock_file = open(p, "w")
+  lock_file.close()
+
+
+  try:
+      with open(GLB_configuration["ongoingDB"]) as json_data:
+          rt = json.load(json_data)
+  except Exception as e:
+      helper.internalLogger.critical("Error opening ongoingDB: {0}.".format(GLB_configuration["ongoingDB"]))
+      helper.einternalLogger.exception(e)
+  
+  return rt
+
+'''----------------------------------------------------------'''
+def UNLOCK(data):
+  with open(GLB_configuration["ongoingDB"], 'w') as fp:
+    json.dump(data, fp)
+
+  global GLB_configuration 
+  p=GLB_configuration["ongoingDB"]+".lock"
+  if os.path.exists(p):
+    os.remove(p)
+
+'''----------------------------------------------------------'''
 def getDirSize(start_path = '.'):
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(start_path):
@@ -59,43 +93,119 @@ api = Flask("api")
 
 @api.route('/api/v1.0/timelapse/status', methods=['GET'])
 def get_timelapse_status():
+    ongoing=LOCK()
     rt={}
     rt['projects']=GLB_projects      
-    rt['ongoing']=GLB_ongoing       
+    rt['ongoing']=ongoing       
 
     rt['disk']={'totalFree': 0,'projects':0,'ongoing':0}
     rt['disk']['projects']=getDirSize(GLB_configuration["mediaPath"])
     rt['disk']['totalFree']=getFreeDiskSize(GLB_configuration["mediaPath"])
  
-    if "name" in GLB_ongoing:
-      rt['disk']['ongoing']=getDirSize(GLB_configuration["mediaPath"]+"/"+GLB_ongoing["name"])
-      
+    if "name" in ongoing:
+      rt['disk']['ongoing']=getDirSize(GLB_configuration["mediaPath"]+"/"+ongoing["name"])    
 
 
     rtjson=json.dumps(rt)
+    UNLOCK(ongoing)
     return rtjson
 
-@api.route('/api/v1.0/timelapse/project', methods=['POST'])
-def post_timelapse_tracker():
+@api.route('/api/v1.0/timelapse/ongoing/new', methods=['POST'])
+def post_timelapse_ongoing():
     rt=jsonify({'result': 'OK'})
-    if not request.json: 
+    if not request.json:
         abort(400)
-    abort(400)
-'''
-    if "auto-tracker" in GLB_configuration:
-      if "what" in GLB_configuration["auto-tracker"]:
-        with open(GLB_configuration["auto-tracker"]["what"], 'w') as outfile:
-          json.dump(request.json, outfile)
-          return rt, 201
-'''
+        return
+    ongoing=LOCK() 
+    if not "name" in request.json:
+        rt=jsonify({'result': 'KO'})
+    else:
+
+      helper.internalLogger.debug("NEW timelapse is requested. Autocanceling current one if any")
+      if "name" in ongoing:
+        cleanUpOngoing(ongoing["name"],True,True)
+        helper.internalLogger.debug("DELETING existing ones with same name if any")
+        purgeProject(ongoing["name"])
+      ongoing=request.json
+      cleanUpOngoing(ongoing["name"],True,True)
+
+    UNLOCK(ongoing)
+    return rt
+
+
+@api.route('/api/v1.0/timelapse/ongoing/stop', methods=['GET'])
+def stop_timelapse_ongoing():
+    rt=jsonify({'result': 'OK'})
+    ongoing=LOCK() 
+    if "name" in ongoing:
+      helper.internalLogger.debug("REST Generating video and cleaning...")
+      generateVideo(ongoing,True,True)
+    UNLOCK(ongoing)
+    return rt
+
+@api.route('/api/v1.0/timelapse/ongoing/cancel', methods=['GET'])
+def cancel_timelapse_ongoing():
+    rt=jsonify({'result': 'OK'})
+    ongoing=LOCK() 
+    if "name" in ongoing:
+      helper.internalLogger.debug("REST Cancelling video...")
+      cleanUpOngoing(ongoing["name"],True,True)
+      ongoing.clear()
+    UNLOCK(ongoing)
+    return rt
+
+@api.route('/api/v1.0/timelapse/ongoing/peek', methods=['GET'])
+def peek_timelapse_ongoing():
+    rt=jsonify({'result': 'OK'})    
+    ongoing=LOCK() 
+    if "name" in ongoing:
+      helper.internalLogger.debug("REST generating video sample so far...")
+      generateVideo(ongoing,False,False)
+    UNLOCK(ongoing)
+    return rt
+
+
+
+
+'''----------------------------------------------------------'''
+'''--------    purgeProject                -----------------'''
+'''----------------------------------------------------------'''
+def purgeProject(name):
+  global GLB_projects 
+
+  try:
+    if "projectDB" in GLB_configuration:
+      with open(GLB_configuration["projectDB"]) as json_data:
+        GLB_projects = json.load(json_data)
+    else:
+      helper.internalLogger.debug("No GLB_projects DB found...")
+      GLB_projects=[]
+
+  except Exception as e:
+    helper.internalLogger.critical("Error processing GLB_configuration json {0} file. Trunking file".format(GLB_configuration["projectDB"]))
+    helper.einternalLogger.exception(e)
+    GLB_projects=[]
+    
+
+  #clean up other ongoing temps.
+  for c in GLB_projects:
+    if "name" in c:
+      helper.internalLogger.debug("Checking status of project {0}:{1}".format(c['name'],c['status']))
+      if c["name"] == name:
+        helper.internalLogger.debug("Removing project {0}:{1}".format(c['name'],c['status']))
+        GLB_projects.remove(c)
+
+  with open(GLB_configuration["projectDB"], 'w') as fp:
+    json.dump(GLB_projects, fp)
+
 
 
 '''----------------------------------------------------------'''
 '''--------    updateProjectsWithOngoing    -----------------'''
 '''----------------------------------------------------------'''
-def updateProjectsWithOngoing():
+def updateProjectsWithOngoing(ongoing):
   global GLB_projects 
-  global GLB_ongoing 
+
 
   try:
     if "projectDB" in GLB_configuration:
@@ -119,21 +229,47 @@ def updateProjectsWithOngoing():
         helper.internalLogger.debug("Removing project {0}:{1}".format(c['name'],c['status']))
         GLB_projects.remove(c)
 
-  helper.internalLogger.debug("Adding project {0}:{1}".format(GLB_ongoing['name'],GLB_ongoing['status']))
-  GLB_projects.append(GLB_ongoing)
+  helper.internalLogger.debug("Adding project {0}:{1}".format(ongoing['name'],ongoing['status']))
+  GLB_projects.append(ongoing)
 
   with open(GLB_configuration["projectDB"], 'w') as fp:
     json.dump(GLB_projects, fp)
 
 
 '''----------------------------------------------------------'''
+'''----------------       cleanUp         -------------------'''
+'''----------------------------------------------------------'''
+def cleanUpOngoing(name,pictures,video):
+
+  helper.internalLogger.debug("CLEAN UP ONGOING {0} - pictures: {1}, video: {2}".format(name,pictures,video))
+
+  if pictures and video:
+    pathOngoing=GLB_configuration["mediaPath"]+"/"+name
+    if os.path.isdir(pathOngoing):
+      shutil.rmtree(pathOngoing)
+    return
+    
+  if pictures:
+    pathPictures=GLB_configuration["mediaPath"]+"/"+name+"/pictures"
+    if os.path.isdir(pathPictures):
+      shutil.rmtree(pathPictures)
+
+  if video:
+    pathVideo=GLB_configuration["mediaPath"]+"/"+name+"/video"
+    if os.path.isdir(pathVideo):
+      shutil.rmtree(pathVideo)
+
+'''----------------------------------------------------------'''
 '''----------------       generateVideo    -------------------'''
 '''----------------------------------------------------------'''
-def generateVideo(cleanUp,closeOngoing):
-  global GLB_ongoing
-  pathPictures =GLB_configuration["mediaPath"]+"/"+GLB_ongoing["name"]+"/pictures"
-  pathVideo=GLB_configuration["mediaPath"]+"/"+GLB_ongoing["name"]+"/video"
-  pathFileVideo=pathVideo + "/"+GLB_ongoing["name"]+".avi"
+def generateVideo(ongoing,cleanUp,closeOngoing):
+
+  pathPictures =GLB_configuration["mediaPath"]+"/"+ongoing["name"]+"/pictures"
+  pathVideo=GLB_configuration["mediaPath"]+"/"+ongoing["name"]+"/video"
+  pathFileVideo=pathVideo + "/"+ongoing["name"]+".avi"
+
+  if not closeOngoing:
+    pathFileVideo=pathFileVideo+".part"
 
   try:
       os.makedirs(pathVideo)
@@ -147,104 +283,72 @@ def generateVideo(cleanUp,closeOngoing):
   helper.internalLogger.debug("Project {0}, generating video CMD:".format(cmd))
   subprocess.call(['bash','-c',cmd]) 
 
-  if closeOngoing:
-    GLB_ongoing["status"]="DONE"
-    GLB_ongoing["video"]=pathFileVideo
-    updateProjectsWithOngoing()
-    GLB_ongoing={}
-  else:
-    # keep ongoing
-    GLB_ongoing["video"]="PART."+pathFileVideo  
-    updateProjectsWithOngoing()
 
   if cleanUp:
-    shutil.rmtree(pathPictures) 
+    if "name" in ongoing:
+      cleanUpOngoing(ongoing["name"],True,False)
+
+  if closeOngoing:
+    ongoing["status"]="DONE"
+    ongoing["video"]=pathFileVideo
+    updateProjectsWithOngoing(ongoing)
+    ongoing.clear()
+  else:
+    updateProjectsWithOngoing(ongoing)
+
+
 
 
 '''----------------------------------------------------------'''
 '''----------------       updateOngoing   -------------------'''
 '''----------------------------------------------------------'''
-def updateOngoing():
+def updateOngoing(ongoing):
 
-  global GLB_ongoing
-  #helper.internalLogger.critical("updateOngoing: {0}",format(GLB_ongoing.dumps()))
-  if not "interval" in GLB_ongoing:
+  helper.internalLogger.debug("updateOngoing: {0}".format(ongoing))
+  if not "interval" in ongoing:
     return False
-
+  
   now=time.time()
 
-  if not  "firstPictureTime" in GLB_ongoing:
-    GLB_ongoing["firstPictureTime"] = now
-    GLB_ongoing["lastPictureTime"]  = 0
-    GLB_ongoing["nbrOfPictures"] = 0
+  if not  "firstPictureTime" in ongoing:
+    ongoing["firstPictureTime"] = now
+    ongoing["lastPictureTime"]  = 0
+    ongoing["nbrOfPictures"] = 0
 
 
-  if  (GLB_ongoing["firstPictureTime"] == now
-      or GLB_ongoing["lastPictureTime"] + GLB_ongoing["interval"] > now):
-    return False
+  if  (ongoing["firstPictureTime"] == now
+      or ongoing["lastPictureTime"] + ongoing["interval"] > now):  
+     return False
 
   #if still here, it's time to take a picture
-  GLB_ongoing["lastPictureTime"]=now
-  GLB_ongoing["nbrOfPictures"]=GLB_ongoing["nbrOfPictures"]+1
-  path=GLB_configuration["mediaPath"]+"/"+GLB_ongoing["name"]+"/pictures"
-  pathfile=path+"/"+GLB_ongoing["name"]+"."+str(now)+".jpg"
+  ongoing["lastPictureTime"]=now
+  ongoing["nbrOfPictures"]=ongoing["nbrOfPictures"]+1
+  path=GLB_configuration["mediaPath"]+"/"+ongoing["name"]+"/pictures"
+  pathfile=path+"/"+ongoing["name"]+"."+str(now)+".jpg"
   try:
         os.makedirs(path)
   except FileExistsError:
         # directory already exists
         pass
 
-  helper.internalLogger.debug("Ongoing {0}, taking photo:{1}".format(GLB_ongoing["name"],pathfile))
+  helper.internalLogger.debug("Ongoing {0}, taking photo:{1}".format(ongoing["name"],pathfile))
   cmd=GLB_configuration["takePhotoCmd"].replace("PARAMETER_OUTFILE",pathfile)
   subprocess.call(['bash','-c',cmd])
 
 
   # It may terminate by date or number of pictures
-  if "maxNbrOfPictures" in GLB_ongoing:
-    if GLB_ongoing["nbrOfPictures"] >= GLB_ongoing["maxNbrOfPictures"]:
-      helper.internalLogger.debug("Generating video, max nbr of picture reached {0}:".format(GLB_ongoing["maxNbrOfPictures"]))
-      generateVideo(True,True)
+  if "maxNbrOfPictures" in ongoing:
+    if ongoing["nbrOfPictures"] >= ongoing["maxNbrOfPictures"]:
+      helper.internalLogger.debug("Generating video, max nbr of picture reached {0}:".format(ongoing["maxNbrOfPictures"]))
+      generateVideo(ongoing,True,True)
       return
 
-  if "maxTime" in GLB_ongoing:
-    if GLB_ongoing["firstPictureTime"] + GLB_ongoing["maxTime"] >= now:
-      helper.internalLogger.debug("Generating video, max time timelapsing reached {0}:".format(GLB_ongoing["maxTime"]))
-      generateVideo(True,True)
+  if "maxTime" in ongoing:
+    if ongoing["firstPictureTime"] + ongoing["maxTime"] >= now:
+      helper.internalLogger.debug("Generating video, max time timelapsing reached {0}:".format(ongoing["maxTime"]))
+      generateVideo(ongoing,True,True)
       return
 
-'''----------------------------------------------------------'''
-'''----------------       updateProjects   -------------------'''
-'''----------------------------------------------------------'''
-
-
-'''----------------------------------------------------------'''
-'''----------------      pollOngoing      -------------------'''
-'''----------------------------------------------------------'''
-
-def pollOngoing():
-
-  global GLB_projects 
-  global GLB_ongoing 
-
-  global firstPolling
-
-  if not any(GLB_ongoing) and firstPolling:
-    firstPolling=False
-    try:
-      #NOTE: BELOW IS ONLY A HACK FOR TESTING WITHOUT REST POST
-      if "ongoingDB" in GLB_configuration:
-        with open(GLB_configuration["ongoingDB"]) as json_data:
-          GLB_ongoing  = json.load(json_data)
-      else:
-        helper.internalLogger.debug("No ongoingDB found...")
-        return
-
-    except Exception as e:
-      helper.internalLogger.critical("Error processing GLB_configuration json {0} file. Exiting".format(GLB_configuration["ongoingDB"]))
-      helper.einternalLogger.exception(e)
-      return 
-
-  updateOngoing()
 
 
 '''----------------------------------------------------------'''
@@ -258,18 +362,15 @@ def main(configfile):
   # Default values
   cfg_log_traces="timelapse.log"
   cfg_log_exceptions="timelapsee.log"
-  cfg_SensorsDirectory={}
 
 
   global GLB_configuration
-  global GLB_ongoing
+
   global GLB_projects
-  global firstPolling
- 
-  firstPolling=True
+
 
   GLB_projects=[]
-  GLB_ongoing={}
+
 
   # Let's fetch data
   GLB_configuration={}
@@ -285,9 +386,12 @@ def main(configfile):
   print('See logs traces in: {0} and exeptions in: {1}-----------'.format(cfg_log_traces,cfg_log_exceptions))  
   helper.internalLogger.critical('timelapse-start -------------------------------')  
   helper.einternalLogger.critical('timelapse-start -------------------------------')
-
-
-
+  UNLOCK({}) # cleanup
+  try:
+        os.makedirs(GLB_configuration["mediaPath"])
+  except FileExistsError:
+        # directory already exists
+        pass
 
 
   if "polling-interval" in GLB_configuration:
@@ -309,8 +413,10 @@ def main(configfile):
   try:    
 
      while True:
-       helper.internalLogger.critical("Polling")
-       pollOngoing()
+       #helper.internalLogger.critical("Polling")
+       d=LOCK()
+       updateOngoing(d)
+       UNLOCK(d)
        time.sleep(pollingInterval)
 
 

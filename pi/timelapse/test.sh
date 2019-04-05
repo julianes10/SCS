@@ -2,12 +2,21 @@ echo "Test GET status..."
 curl -i http://localhost:5060/api/v1.0/timelapse/status
 
 
-echo "Test POST new project..."
-#curl -i -H "Content-Type: application/json" -X POST -d '{ "content":[ ] }' http://localhost:5057/api/v1.0/kodi/tracker
+echo "Test POST new timelapse..."
+curl -i -H "Content-Type: application/json" -X POST -d '{"name":"new","status":"ONGOING","interval":2,"maxNbrOfPictures":5}' http://localhost:5060/api/v1.0/timelapse/ongoing/new
 
 
-echo "Test POST delete complete a project: stop, clean photo and videos..."
-#curl -i -H "Content-Type: application/json" -X POST -d '{"fake":"fake"}' http://localhost:5057/api/v1.0/kodi/tracker
+echo "Test POST stop video. Generate it and clean photos"
+curl -i http://localhost:5060/api/v1.0/timelapse/ongoing/stop
+
+
+echo "Test POST take a look nor stopping neither cleaning"
+curl -i http://localhost:5060/api/v1.0/timelapse/ongoing/peek
+
+
+echo "Test POST cancel ongoing. Do no generate video, just clean and stop"
+curl -i http://localhost:5060/api/v1.0/timelapse/ongoing/cancel
+
 
 echo "Test POST create video, delete intermediates..."
 
