@@ -1,0 +1,56 @@
+<!-- index.html -->
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container">
+<h1>TimeLapse Web Interface</h1>
+
+<h2>Ongoing timelapse</h2>
+{% if status.ongoing.name %}
+<table>
+   <tr><td>Name</td><td>{{status.ongoing.name}}</td></tr>
+   <tr><td>Status</td><td>{{status.ongoing.status}}</td></tr>
+   <tr><td>Interval(s)</td><td>{{status.ongoing.interval}}</td></tr>
+   <tr><td>Max Record Time(s)</td><td>{{status.ongoing.maxTime}}</td></tr>
+   <tr><td>Max number of pictures</td><td>{{status.ongoing.maxNbrOfPictures}}</td></tr>
+   <tr><td>Current number of pictures</td><td>{{status.ongoing.nbrOfPictures}}</td></tr>
+   <tr><td>First picture timestamp</td><td>{{status.ongoing.nbrOfPictures}}</td></tr>
+   <tr><td>Last picture timestamp</td><td>{{status.ongoing.nbrOfPictures}}</td></tr>
+   <tr><td>Peek video</td><td>{{status.ongoing.nbrOfPictures}}</td></tr>
+</table>
+{% else %}
+No timelapse is running right now
+{% endif %}
+
+
+<h2>Available projects</h2>
+{% if status.projects %}
+<table>
+   {% for prj in status.projects %}
+   <tr><td>{{ prj['name'] }}</td></tr>
+   {% endfor %}
+</table>
+{% else %}
+No timelapse projects available so far
+{% endif %}
+
+<h2>Disk Info</h2> 
+<table>
+   <th><td>Value</td><td>Units</td></tr>
+   <tr><td>Ongoing</td><td align="right">{{ (status.disk.ongoing/1024/1024)|round(1)}}</td><td>MB</td></tr>
+   <tr><td>Projects</td><td align="right">{{ (status.disk.projects/1024/1024)|round(1)}}</td><td>MB</td></tr>
+   <tr><td>Total Free</td><td align="right">{{ (status.disk.totalFree/1024/1024)|round(1)}}</td><td>MB</td></tr>
+</table>
+</div>
+
+<h2>Request a new timelapse¡</h2>
+<form action="{{ url_for('home') }}" method = "POST">
+    <table>
+      <tr><td>Name (*)</td><td><input type=text name=name required></td></tr>
+      <tr><td>Interval (*)</td><td><input type=number name=interval required></td></tr>
+      <tr><td>Max number of pictures</td><td><input type=number name=maxNbrOfPictures></td></tr>
+      <tr><td>Max Record Time(s)</td><td><input type=number name=maxTime></td></tr> 
+     </table>
+     <input type=submit value="Request it">
+</form>
+{% endblock %}
