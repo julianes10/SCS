@@ -14,10 +14,18 @@
    <tr><td>Max Record Time(s)</td><td>{{status.ongoing.maxTime}}</td></tr>
    <tr><td>Max number of pictures</td><td>{{status.ongoing.maxNbrOfPictures}}</td></tr>
    <tr><td>Current number of pictures</td><td>{{status.ongoing.nbrOfPictures}}</td></tr>
-   <tr><td>First picture timestamp</td><td>{{status.ongoing.nbrOfPictures}}</td></tr>
-   <tr><td>Last picture timestamp</td><td>{{status.ongoing.nbrOfPictures}}</td></tr>
-   <tr><td>Peek video</td><td>{{status.ongoing.nbrOfPictures}}</td></tr>
+   {% if status.ongoing.firstPictureTime %}
+     <tr><td>First picture timestamp</td><td>{{status.ongoing.firstPictureTime|datetime}}</td></tr>
+     <tr><td>Last picture timestamp</td><td>{{status.ongoing.lastPictureTime|datetime}}</td></tr>
+   {% endif %}
+   {% if status.ongoing.video %}
+   <tr><td>Peek video</td><td>{{status.ongoing.video}}</td></tr>
+   {% endif %}
+
 </table>
+   <form action="{{ url_for('gui_peek') }}"> <input type="submit" value="PEEK" /></form>
+   <form action="{{ url_for('gui_stop') }}"> <input type="submit" value="STOP" /></form>
+   <form action="{{ url_for('gui_cancel') }}"> <input type="submit" value="CANCEL" /></form> 
 {% else %}
 No timelapse is running right now
 {% endif %}
@@ -27,7 +35,7 @@ No timelapse is running right now
 {% if status.projects %}
 <table>
    {% for prj in status.projects %}
-   <tr><td>{{ prj['name'] }}</td></tr>
+   <tr><td>{{ prj.name }}</td><td>www <a href="{{ url_for('static',filename=prj.video) }}"> video</a></td></tr>
    {% endfor %}
 </table>
 {% else %}

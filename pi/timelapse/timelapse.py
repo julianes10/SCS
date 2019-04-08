@@ -14,7 +14,8 @@ from random import randint
 import re
 import random
 import shutil
-from flask import Flask, render_template
+from flask import Flask, render_template,redirect
+
 
 ''' 
 ------------- ongoing fields
@@ -55,6 +56,7 @@ def getVersion():
 from flask import Flask, jsonify,abort,make_response,request, url_for
 
 from helper import *
+
 
 
 '''----------------------------------------------------------'''
@@ -108,10 +110,20 @@ def getFreeDiskSize(path = '.'):
     rt=statvfs.f_frsize * statvfs.f_bavail     # Number of free bytes that ordinary users
     return rt
 
+
+
+
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+
+def format_datetime(value):
+    return time.ctime(value)
+
 '''----------------------------------------------------------'''
 '''----------------      API REST         -------------------'''
 '''----------------------------------------------------------'''
-api = Flask("api",template_folder="templates")
+api = Flask("api",template_folder="templates",static_folder='/tmp')
+api.jinja_env.filters['datetime'] = format_datetime
 
 
 @api.route('/api/v1.0/timelapse/status', methods=['GET'])
@@ -167,6 +179,9 @@ def requestNewOngoing(req):
 
 @api.route('/api/v1.0/timelapse/ongoing/stop', methods=['GET'])
 def stop_timelapse_ongoing():
+    return stopOngoing()
+
+def stopOngoing():
     rt=jsonify({'result': 'OK'})
     ongoing=LOCK() 
     if "name" in ongoing:
@@ -177,6 +192,9 @@ def stop_timelapse_ongoing():
 
 @api.route('/api/v1.0/timelapse/ongoing/cancel', methods=['GET'])
 def cancel_timelapse_ongoing():
+    return cancelOngoing()
+
+def cancelOngoing():
     rt=jsonify({'result': 'OK'})
     ongoing=LOCK() 
     if "name" in ongoing:
@@ -188,6 +206,9 @@ def cancel_timelapse_ongoing():
 
 @api.route('/api/v1.0/timelapse/ongoing/peek', methods=['GET'])
 def peek_timelapse_ongoing():
+    peekOngoing()
+
+def peekOngoing():
     rt=jsonify({'result': 'OK'})    
     ongoing=LOCK() 
     if "name" in ongoing:
@@ -210,8 +231,6 @@ def clean_timelapse_project():
     #TODO cancel ongoing clean all projects    UNLOCK(ongoing)
     return rt
 
-
-
 @api.route('/',methods=["GET", "POST"])
 def home():
     if request.method == 'POST':
@@ -223,6 +242,25 @@ def home():
     st=getStatus()
     rt=render_template('index.html', title="TimeLapse Site",status=st,myvar="jjjjj")
     return rt
+
+@api.route('/cancel',methods=["GET"])
+def gui_cancel():
+   helper.internalLogger.debug("GUI Cancelling video...")
+   cancelOngoing()
+   return redirect(url_for('home'))
+
+@api.route('/stop',methods=["GET"])
+def gui_stop():
+   helper.internalLogger.debug("GUI Stopping video...")
+   stopOngoing()
+   return redirect(url_for('home'))
+
+@api.route('/peek',methods=["GET"])
+def gui_peek():
+   helper.internalLogger.debug("GUI Peeking video...")
+   peekOngoing()
+   return redirect(url_for('home'))
+
 
 '''----------------------------------------------------------'''
 '''--------    purgeProject                -----------------'''
@@ -487,6 +525,7 @@ def main(configfile):
 '''----------------------------------------------------------'''
 '''----------------     apirest_task      -------------------'''
 def apirest_task():
+
   api.run(debug=True, use_reloader=False,port=GLB_configuration["port"],host=GLB_configuration["host"])
 
 
