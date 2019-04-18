@@ -60,6 +60,29 @@ from helper import *
 
 
 '''----------------------------------------------------------'''
+def getProjects():
+  rt=[]
+  try:
+    if "projectDB" in GLB_configuration:
+      with open(GLB_configuration["projectDB"]) as json_data:
+        rt = json.load(json_data)
+    else:
+      helper.internalLogger.debug("No projects DB found...")
+      rt=[]
+
+  except Exception as e:
+    helper.internalLogger.critical("Error processing GLB_configuration projectDB json {0} file. Trunking file".format(GLB_configuration["projectDB"]))
+    helper.einternalLogger.exception(e)
+    rt=[]
+  
+  return rt
+
+def setProjects(projects):
+  with open(GLB_configuration["projectDB"], 'w') as fp:
+    json.dump(projects, fp)
+
+
+'''----------------------------------------------------------'''
 def LOCK():
   global GLB_configuration 
   rt = {}
@@ -117,15 +140,33 @@ def getFreeDiskSize(path = '.'):
 '''----------------------------------------------------------'''
 
 def format_datetime(value):
-    return time.ctime(value)
+    aux="unknown"
+    try:
+      aux=time.ctime(value)
+    except Exception as e:
+      helper.internalLogger.critical("Error reading value date: {0}.".format(value))
+      helper.einternalLogger.exception(e)
+    return aux 
 
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+
+def format_videoURL(value):
+    aux="unknown"
+    try:
+      aux=value[1:]
+    except Exception as e:
+      helper.internalLogger.critical("Error reading value date: {0}.".format(value))
+      helper.einternalLogger.exception(e)
+    return aux
 '''----------------------------------------------------------'''
 '''----------------      API REST         -------------------'''
 '''----------------------------------------------------------'''
-api = Flask("api",template_folder="templates",static_folder='/tmp')
+api = Flask("api",template_folder="templates",static_folder='static')
 api.jinja_env.filters['datetime'] = format_datetime
+api.jinja_env.filters['videoURL'] = format_videoURL
 
-
+'''----------------------------------------------------------'''
 @api.route('/api/v1.0/timelapse/status', methods=['GET'])
 def get_timelapse_status():
     return json.dumps(getStatus())
@@ -133,7 +174,7 @@ def get_timelapse_status():
 def getStatus():
     ongoing=LOCK()
     rt={}
-    rt['projects']=GLB_projects      
+    rt['projects']=getProjects()      
     rt['ongoing']=ongoing       
 
     rt['disk']={'totalFree': 0,'projects':0,'ongoing':0}
@@ -145,7 +186,7 @@ def getStatus():
 
     UNLOCK(ongoing)
     return rt
-
+'''----------------------------------------------------------'''
 @api.route('/api/v1.0/timelapse/ongoing/new', methods=['POST'])
 def post_timelapse_ongoing():
     if not request.json:
@@ -170,13 +211,17 @@ def requestNewOngoing(req):
       ongoing.clear()
       ongoing["name"]=req["name"]
       ongoing["interval"]=int(req["interval"])
-      ongoing["maxTime"]=int(req["maxTime"])
-      ongoing["maxNbrOfPictures"]=int(req["maxNbrOfPictures"])
+      if "maxTime" in req:
+       if req["maxTime"] != "": 
+        ongoing["maxTime"]=int(req["maxTime"])
+      if "maxNbrOfPictures" in req:
+       if req["maxNbrOfPictures"] != "":
+        ongoing["maxNbrOfPictures"]=int(req["maxNbrOfPictures"])
       ongoing["status"]="ONGOING"
       cleanUpOngoing(ongoing["name"],True,True)
     UNLOCK(ongoing) 
     return rt
-
+'''----------------------------------------------------------'''
 @api.route('/api/v1.0/timelapse/ongoing/stop', methods=['GET'])
 def stop_timelapse_ongoing():
     return stopOngoing()
@@ -189,7 +234,7 @@ def stopOngoing():
       generateVideo(ongoing,True,True)
     UNLOCK(ongoing)
     return rt
-
+'''----------------------------------------------------------'''
 @api.route('/api/v1.0/timelapse/ongoing/cancel', methods=['GET'])
 def cancel_timelapse_ongoing():
     return cancelOngoing()
@@ -203,7 +248,7 @@ def cancelOngoing():
       ongoing.clear()
     UNLOCK(ongoing)
     return rt
-
+'''----------------------------------------------------------'''
 @api.route('/api/v1.0/timelapse/ongoing/peek', methods=['GET'])
 def peek_timelapse_ongoing():
     peekOngoing()
@@ -216,21 +261,30 @@ def peekOngoing():
       generateVideo(ongoing,False,False)
     UNLOCK(ongoing)
     return rt
-
+'''----------------------------------------------------------'''
 @api.route('/api/v1.0/timelapse/wipe', methods=['GET'])
 def wipe_timelapse():
     rt=jsonify({'result': 'OK'})    
     ongoing=LOCK() 
     #TODO cancel ongoing clean all projects    UNLOCK(ongoing)
     return rt
-
+'''----------------------------------------------------------'''
 @api.route('/api/v1.0/timelapse/project/clean/<name>', methods=['GET'])
-def clean_timelapse_project():
-    rt=jsonify({'result': 'OK'})    
-    ongoing=LOCK() 
-    #TODO cancel ongoing clean all projects    UNLOCK(ongoing)
-    return rt
+def clean_timelapse_project(name):
+    return cleanProject(name)
 
+def cleanProject(name):
+    rt=jsonify({'result': 'KO'})    
+    try:
+        cleanUpOngoing(name,True,True)
+        helper.internalLogger.debug("Cleaning {0}".format(name))
+        purgeProject(name) 
+        rt=jsonify({'result': 'OK'})    
+    except Exception as e:
+        helper.internalLogger.critical("Error cleaning: {0}.".format(name))
+        helper.einternalLogger.exception(e)
+    return rt
+'''----------------------------------------------------------'''
 @api.route('/',methods=["GET", "POST"])
 def home():
     if request.method == 'POST':
@@ -242,56 +296,48 @@ def home():
     st=getStatus()
     rt=render_template('index.html', title="TimeLapse Site",status=st,myvar="jjjjj")
     return rt
-
+'''----------------------------------------------------------'''
 @api.route('/cancel',methods=["GET"])
 def gui_cancel():
    helper.internalLogger.debug("GUI Cancelling video...")
    cancelOngoing()
    return redirect(url_for('home'))
-
+'''----------------------------------------------------------'''
 @api.route('/stop',methods=["GET"])
 def gui_stop():
    helper.internalLogger.debug("GUI Stopping video...")
    stopOngoing()
    return redirect(url_for('home'))
-
+'''----------------------------------------------------------'''
 @api.route('/peek',methods=["GET"])
 def gui_peek():
    helper.internalLogger.debug("GUI Peeking video...")
    peekOngoing()
    return redirect(url_for('home'))
-
+'''----------------------------------------------------------'''
+@api.route('/clean/<name>',methods=["GET"])
+def gui_clean(name):
+   helper.internalLogger.debug("GUI clean {0}...".format(name))
+   cleanProject(name)
+   return redirect(url_for('home'))
 
 '''----------------------------------------------------------'''
 '''--------    purgeProject                -----------------'''
 '''----------------------------------------------------------'''
 def purgeProject(name):
-  global GLB_projects 
 
-  try:
-    if "projectDB" in GLB_configuration:
-      with open(GLB_configuration["projectDB"]) as json_data:
-        GLB_projects = json.load(json_data)
-    else:
-      helper.internalLogger.debug("No GLB_projects DB found...")
-      GLB_projects=[]
-
-  except Exception as e:
-    helper.internalLogger.critical("Error processing GLB_configuration json {0} file. Trunking file".format(GLB_configuration["projectDB"]))
-    helper.einternalLogger.exception(e)
-    GLB_projects=[]
-    
+  projects=getProjects() 
+  
 
   #clean up other ongoing temps.
-  for c in GLB_projects:
+  for c in projects:
     if "name" in c:
       helper.internalLogger.debug("Checking status of project {0}:{1}".format(c['name'],c['status']))
       if c["name"] == name:
         helper.internalLogger.debug("Removing project {0}:{1}".format(c['name'],c['status']))
-        GLB_projects.remove(c)
+        projects.remove(c)
 
-  with open(GLB_configuration["projectDB"], 'w') as fp:
-    json.dump(GLB_projects, fp)
+  setProjects(projects)
 
 
 
@@ -299,36 +345,20 @@ def purgeProject(name):
 '''--------    updateProjectsWithOngoing    -----------------'''
 '''----------------------------------------------------------'''
 def updateProjectsWithOngoing(ongoing):
-  global GLB_projects 
-
-
-  try:
-    if "projectDB" in GLB_configuration:
-      with open(GLB_configuration["projectDB"]) as json_data:
-        GLB_projects = json.load(json_data)
-    else:
-      helper.internalLogger.debug("No GLB_projects DB found...")
-      GLB_projects=[]
-
-  except Exception as e:
-    helper.internalLogger.critical("Error processing GLB_configuration json {0} file. Trunking file".format(GLB_configuration["projectDB"]))
-    helper.einternalLogger.exception(e)
-    GLB_projects=[]
-    
+  projects=getProjects() 
+   
 
   #clean up other ongoing temps.
-  for c in GLB_projects:
+  for c in projects:
     if "status" in c and "name" in c:
       helper.internalLogger.debug("Checking status of project {0}:{1}".format(c['name'],c['status']))
       if c["status"] == "ONGOING":
         helper.internalLogger.debug("Removing project {0}:{1}".format(c['name'],c['status']))
-        GLB_projects.remove(c)
+        projects.remove(c)
 
   helper.internalLogger.debug("Adding project {0}:{1}".format(ongoing['name'],ongoing['status']))
-  GLB_projects.append(ongoing)
-
-  with open(GLB_configuration["projectDB"], 'w') as fp:
-    json.dump(GLB_projects, fp)
+  projects.append(ongoing)
+  setProjects(projects)
 
 
 '''----------------------------------------------------------'''
@@ -364,7 +394,7 @@ def generateVideo(ongoing,cleanUp,closeOngoing):
   pathFileVideo=pathVideo + "/"+ongoing["name"]+".avi"
 
   if not closeOngoing:
-    pathFileVideo=pathFileVideo+".part"
+    pathFileVideo=pathFileVideo+".part.avi"
 
   try:
       os.makedirs(pathVideo)
@@ -383,9 +413,9 @@ def generateVideo(ongoing,cleanUp,closeOngoing):
     if "name" in ongoing:
       cleanUpOngoing(ongoing["name"],True,False)
 
+  ongoing["video"]=pathFileVideo
   if closeOngoing:
     ongoing["status"]="DONE"
-    ongoing["video"]=pathFileVideo
     updateProjectsWithOngoing(ongoing)
     ongoing.clear()
   else:
@@ -445,6 +475,48 @@ def updateOngoing(ongoing):
       return
 
 
+'''----------------------------------------------------------'''
+def  mountBindMediaPath():
+  ### Mount in loop mediapath 
+  localpath=os.path.dirname(os.path.abspath(__file__))+"/static/tmp/"+os.path.basename(GLB_configuration["mediaPath"])
+
+  try:
+        #Create local path
+        os.makedirs(localpath)
+  except FileExistsError:
+        # directory already exists
+        pass
+
+
+  try:
+    cmd="sudo mount --bind "+GLB_configuration["mediaPath"]+ " " +localpath
+    helper.internalLogger.debug("Mounting in loop mediapath for static flask access:{0}".format(cmd))
+    subprocess.call(['bash','-c',cmd]) 
+  except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.debug('Error: executing {0}. Exception unprocessed properly. Exiting'.format(cmd))
+    helper.einternalLogger.exception(e)  
+
+'''----------------------------------------------------------'''
+def rebuildProjectsFromFileSystem():
+    projects=[]
+
+    extension = "avi"
+    for dirpath, dirnames, files in os.walk(GLB_configuration["mediaPath"]):
+        for name in files:
+            if extension and name.lower().endswith(extension):
+                helper.internalLogger.debug("File IN {0}".format(os.path.join(dirpath, name)))
+                item={}
+                
+                item["name"]=os.path.basename(os.path.dirname(dirpath))
+                item["video"]=os.path.join(dirpath, name)
+                item["lastPictureTime"]=os.path.getmtime(os.path.join(dirpath, name))
+                item["status"]="DONE"
+                projects.append(item)
+            elif not extension:
+                helper.internalLogger.debug("File OUT {0}".format(os.path.join(dirpath, name)))
+
+    setProjects(projects)
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
@@ -460,11 +532,6 @@ def main(configfile):
 
 
   global GLB_configuration
-
-  global GLB_projects
-
-
-  GLB_projects=[]
 
 
   # Let's fetch data
@@ -482,12 +549,16 @@ def main(configfile):
   helper.internalLogger.critical('timelapse-start -------------------------------')  
   helper.einternalLogger.critical('timelapse-start -------------------------------')
   UNLOCK({}) # cleanup
+
   try:
         os.makedirs(GLB_configuration["mediaPath"])
   except FileExistsError:
         # directory already exists
         pass
-
+  
+  mountBindMediaPath()
+ 
+  rebuildProjectsFromFileSystem()
 
   if "polling-interval" in GLB_configuration:
       pollingInterval=GLB_configuration["polling-interval"]
