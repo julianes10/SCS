@@ -1,0 +1,15 @@
+[Unit]
+Description = Service for auto dial
+After = remote-fs.target network-online.target
+Wants = network-online.target
+
+[Service]
+User = root
+Group = root
+Type = simple
+ExecStart = /usr/bin/wvdial orange
+Restart = always
+RestartSec = 30
+
+[Install]
+WantedBy = multi-user.target
