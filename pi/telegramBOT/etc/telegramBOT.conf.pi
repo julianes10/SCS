@@ -1,0 +1,15 @@
+{
+  "log": { "logTraces":"/tmp/telegram.log",
+           "logExceptions":"/tmp/telegrame.log"
+  },
+  "hash":"FAKE812464925:AAGNmFBIyOvgOSdQxFaeCVb9PaOu5sBNqJM",
+  "menu" : ["foto","date","test"],
+  "actions" : { 
+    "date"  : { "cmd" : "date"},
+    "foto"  : { "cmd" : "takePiVideo.py /tmp/img", "image": "/tmp/img"},
+    "test"  : { "cmd" : "echo hola-esto-es-un-test"}
+  },
+  "periodic-static-actions" : {
+    "test"  : { "action" : "date","interval":10}
+  }
+}

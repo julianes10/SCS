@@ -1,0 +1,15 @@
+{
+  "log": { "logTraces":"/tmp/telegram.log",
+           "logExceptions":"/tmp/telegrame.log"
+  },
+  "hash":"FAKE812464925:AAGNmFBIyOvgOSdQxFaeCVb9PaOu5sBNqJM",
+  "menu" : ["foto","date","test"],
+  "actions" : { 
+    "date"  : { "cmd" : "date"},
+    "foto"  : { "cmd" : "fswebcam -r 1280x720 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
+    "test"  : { "cmd" : "echo hola-esto-es-un-test"}
+  },
+  "periodic-static-actions" : {
+    "test"  : { "action" : "date","interval":10}
+  }
+}

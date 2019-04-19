@@ -1,0 +1,17 @@
+{
+  "log": { "logTraces":"/tmp/telegram.log",
+           "logExceptions":"/tmp/telegrame.log"
+  },
+  "hash":"FAKE8712464925:AAGNmFBIyOvgOSdQxFaeCVb9PaOu5sBNqJM",
+  "menu" : ["foto","video","temperature","pepe"],
+  "actions" : { 
+    "foto"  : { "cmd" : "date"},
+    "pepe"  : { "cmd" : "ls /"},
+    "video" : { "cmd" : "myScript.sh /tmp/img", "image": "/tmp/img"},
+    "temperature" : { "cmd" : "myScript2.sh /tmp/vid", "video": "/tmp/vid"},
+    "test"  : { "cmd" : "periodic"}
+  },
+  "periodic-static-actions" : {
+    "test"  : { "action" : "pepe","interval":5}
+  }
+}

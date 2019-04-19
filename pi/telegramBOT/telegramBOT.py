@@ -52,14 +52,26 @@ def runAction(chatid,action):
 
   if len(action) == 1:
     bot.send_message(chatid,result)
-  else:
-    if "video" in action:
-      pass
+
+    if "video" in action: 
+      if os.path.isfile(action["video"]):
+        f = open(action["video"], 'rb')
+        bot.send_video(chat.id,f)    
+        f.close()  
     if "image" in action:
-      pass
-    if "text" in action:     
-      pass
-  
+      if os.path.isfile(action["image"]):
+        f = open(action["image"], 'rb')
+        bot.send_photo(chat.id, f)
+        f.close()
+    if "text" in action:
+      if os.path.isfile(action["text"]):
+        f = open(action["text"], 'r')
+        t = f.read()
+        bot.send_message(chatid,t)
+        f.close()        
+    
+    ### TODO limpiar los ficheros??? no se, se carga multiusuario...
+
   return None
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''

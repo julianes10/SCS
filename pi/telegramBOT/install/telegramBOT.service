@@ -1,0 +1,15 @@
+[Unit]
+Description=Telegram bot
+After=multi-user.target
+
+[Service]
+Type=simple
+#ExecStart=/opt/PROJECT_NAME/telegramBOT/telegramBOT.py --configfile /etc/telegramBOT.conf
+ExecStart=/home/pi/telegramBOT/telegramBOT.py --configfile /home/pi/telegramBOT/etc/telegramBOT.conf.example
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+
