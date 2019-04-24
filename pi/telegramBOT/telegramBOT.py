@@ -17,21 +17,24 @@ import shutil
 import telebot
 from helper import *
 
+_FINISHTASKS=False
 
 '''----------------------------------------------------------'''
 '''----------------       periodic tasks  -------------------'''
 '''----------------------------------------------------------'''
 
 def periodicTasks():
+  #TODO custom periodict task and make sleep period smaller, interval by idlist
   global bot
   global chatidList
   helper.internalLogger.debug("TeleBot periodic start")
-  while True:
+  while not _FINISHTASKS:
     helper.internalLogger.debug("TeleBot periodic")
     if len(chatidList)>0:
       for i in chatidList:
-        bot.send_message(i, "kk")
-    time.sleep( 5 )
+        runAction(i,GLB_configuration["actions"][GLB_configuration["periodic-static-actions"]["default"]["action"]])
+    time.sleep(GLB_configuration["periodic-static-actions"]["default"]["interval"])
+
 
 
 '''----------------------------------------------------------'''
@@ -42,7 +45,7 @@ def runAction(chatid,action):
     cmd=action["cmd"]
     global bot
     result=subprocess.check_output(['bash','-c',cmd])
-
+    helper.internalLogger.debug("Cmd {0}, result {1}".format(cmd,result))
   except Exception as e:
     e = sys.exc_info()[0]
     helper.internalLogger.critical('Error: Exception executing {0}'.format(action))
@@ -50,27 +53,36 @@ def runAction(chatid,action):
     bot.send_message(chatid,'Error: Exception executing {0}'.format(action))
     return
 
-  if len(action) == 1:
-    bot.send_message(chatid,result)
+  helper.internalLogger.debug("Let's respond with associated info to action{0}".format(action))
 
-    if "video" in action: 
-      if os.path.isfile(action["video"]):
-        f = open(action["video"], 'rb')
-        bot.send_video(chat.id,f)    
-        f.close()  
-    if "image" in action:
-      if os.path.isfile(action["image"]):
-        f = open(action["image"], 'rb')
-        bot.send_photo(chat.id, f)
-        f.close()
-    if "text" in action:
-      if os.path.isfile(action["text"]):
-        f = open(action["text"], 'r')
-        t = f.read()
-        bot.send_message(chatid,t)
-        f.close()        
-    
-    ### TODO limpiar los ficheros??? no se, se carga multiusuario...
+
+  if "video" in action: 
+    if os.path.isfile(action["video"]):
+      f = open(action["video"], 'rb')
+      bot.send_video(chatid,f)    
+      f.close()  
+  if "image" in action:
+    helper.internalLogger.debug("Action with image")
+    if os.path.isfile(action["image"]):
+      helper.internalLogger.debug("File: {0}".format(action["image"]))
+      f = open(action["image"], 'rb')
+      bot.send_photo(chatid, f)
+      f.close()
+  if "text" in action:
+    if os.path.isfile(action["text"]):
+      f = open(action["text"], 'r')
+      t = f.read()
+      bot.send_message(chatid,t)
+      f.close()        
+
+  if len(result)>0:
+    bot.send_message(chatid,result)
+    helper.internalLogger.debug("Action: {0}".format(action))
+
+
+  helper.internalLogger.debug("Action ended")
+
+  ### TODO limpiar los ficheros??? no se, se carga multiusuario...
 
   return None
 '''----------------------------------------------------------'''
@@ -138,23 +150,26 @@ def main(configfile):
         bot.reply_to(message, "Ignoring this request.")
 
 
+    global _FINISHTASKS
     helper.internalLogger.debug("TeleBot periodic starting...")
     pt = threading.Thread(target=periodicTasks)
     pt.start()
     helper.internalLogger.debug("TeleBot periodic started")
 
 
-    helper.internalLogger.debug("Polling")
-    bot.polling()
-
-
-
-
+    helper.internalLogger.debug("Polling...")
+    tout=20
+    if "pollingTimeout" in GLB_configuration:
+      tout=GLB_configuration["pollingTimeout"] 
+    bot.polling(none_stop=True,timeout=tout)
+ 
   except Exception as e:
     e = sys.exc_info()[0]
     helper.internalLogger.critical('Error: Exception unprocessed properly. Exiting')
     helper.einternalLogger.exception(e)  
-    print('telegramBOT-General exeception captured. See log:{0}',format(cfg_log_exceptions))        
+    print('telegramBOT-General exeception captured. See log:{0}',format(cfg_log_exceptions))   
+    _FINISHTASKS = True
+    pt.join()
     loggingEnd()
 
 

@@ -1,10 +1,11 @@
 [Unit]
-Description=Simple kodi agent monitor
+Description=Timelapse service
 After=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/opt/PROJECT_NAME/kodiAgent/kodiAgent.py --configfile /etc/kodiAgent.conf
+ExecStart=/opt/PROJECT_NAME/timelapse/timelapse.py --configfile /etc/timelapse.conf
+WorkingDirectory=/opt/PROJECT_NAME/timelapse/
 Restart=always
 
 [Install]

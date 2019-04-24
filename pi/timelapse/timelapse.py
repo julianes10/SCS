@@ -475,8 +475,10 @@ def updateOngoing(ongoing):
       return
 
 
+
+
 '''----------------------------------------------------------'''
-def  mountBindMediaPath():
+def  mountBindMediaPath(mount=True):
   ### Mount in loop mediapath 
   localpath=os.path.dirname(os.path.abspath(__file__))+"/static/tmp/"+os.path.basename(GLB_configuration["mediaPath"])
 
@@ -486,10 +488,13 @@ def  mountBindMediaPath():
   except FileExistsError:
         # directory already exists
         pass
-
+  
 
   try:
-    cmd="sudo mount --bind "+GLB_configuration["mediaPath"]+ " " +localpath
+    cmd="sudo umount " + localpath
+    if mount:
+      cmd="sudo mount --bind "+GLB_configuration["mediaPath"]+ " " +localpath
+
     helper.internalLogger.debug("Mounting in loop mediapath for static flask access:{0}".format(cmd))
     subprocess.call(['bash','-c',cmd]) 
   except Exception as e:
@@ -556,7 +561,8 @@ def main(configfile):
         # directory already exists
         pass
   
-  mountBindMediaPath()
+  mountBindMediaPath(False)
+  mountBindMediaPath(True)
  
   rebuildProjectsFromFileSystem()
 
@@ -591,6 +597,7 @@ def main(configfile):
     helper.internalLogger.critical('Error: Exception unprocessed properly. Exiting')
     helper.einternalLogger.exception(e)  
     print('timelapse-General exeception captured. See log:{0}',format(cfg_log_exceptions))        
+    mountBindMediaPath(False)
     loggingEnd()
 
 '''----------------------------------------------------------'''

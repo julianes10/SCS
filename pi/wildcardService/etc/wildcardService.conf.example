@@ -1,0 +1,6 @@
+{
+  "log": { "logTraces":"/tmp/wildcardService.log",
+           "logExceptions":"/tmp/wildcardService.log"
+  },
+  "cmd":"ssh -i ~/.ssh/julianes10.parecesec.pem julianes10.parecesec@julianes10-37256.portmap.host -N -R 37256:localhost:22"
+}
