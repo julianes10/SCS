@@ -1,0 +1,7 @@
+{
+"jsonrpc": "2.0", 
+"method": "Application.SetMute", 
+"params": {"mute": false},
+"id": 1
+} 
+

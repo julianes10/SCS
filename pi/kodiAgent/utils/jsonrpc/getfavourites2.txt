@@ -1,0 +1,9 @@
+{
+"jsonrpc": "2.0", 
+"method": "Favourites.GetFavourites",
+ "params": { "properties": ["window","path","thumbnail","windowparameter"] },
+"id": 1
+} 
+
+
+

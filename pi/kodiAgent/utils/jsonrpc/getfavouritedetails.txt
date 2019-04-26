@@ -1,0 +1,9 @@
+{
+"jsonrpc": "2.0", 
+"method": "Favourite.Details.Favourite",
+"params": [{"properties":"esRadio (Madrid) 99.1 (Spanish Talk)"}],
+"id": 1
+} 
+
+
+

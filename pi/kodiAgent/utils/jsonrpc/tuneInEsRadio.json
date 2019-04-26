@@ -1,0 +1,9 @@
+{
+"jsonrpc": "2.0", 
+"method": "Player.Open",
+"params": [{"file":"plugin://plugin.audio.tuneinradio/?path=tune&id=s111410"}],
+"id": 1
+} 
+
+
+

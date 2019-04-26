@@ -1,0 +1,9 @@
+{
+"jsonrpc": "2.0", 
+"method": "Player.Stop",
+"params": {"playerid":0},
+"id": 1
+} 
+
+
+

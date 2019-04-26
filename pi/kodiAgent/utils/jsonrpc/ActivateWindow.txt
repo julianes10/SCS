@@ -1,0 +1,9 @@
+{
+"jsonrpc": "2.0", 
+"method": "GUI.ActivateWindow",
+"params": {"window": "plugin://plugin.audio.tuneinradio/?logo=http%3A%2F%2Fcdn-radiotime-logos.tunein.com%2Fs163234q.png&path=tune&id=s163234&name=Cadena+SER+-+Madrid+Oeste"},
+"id": 1
+} 
+
+
+

@@ -1,0 +1,9 @@
+{
+"jsonrpc": "2.0", 
+"method": "Addons.GetAddonDetails", 
+"params": {"addonid": "plugin.audio.tuneinradio"},
+"id": 1
+} 
+
+
+

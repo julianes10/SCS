@@ -1,0 +1,9 @@
+{
+"jsonrpc": "2.0", 
+"method": "Player.PlayPause",
+"params": {"item": "Cadena SER - Madrid Oeste"},
+"id": 1
+} 
+
+
+

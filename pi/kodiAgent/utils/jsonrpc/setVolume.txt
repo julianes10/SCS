@@ -1,0 +1,9 @@
+{
+"jsonrpc": "2.0", 
+"method": "Application.SetVolume",
+"params": { "volume":50},
+"id": 1
+} 
+
+
+
