@@ -111,7 +111,6 @@ def UNLOCK(data):
   with open(GLB_configuration["ongoingDB"], 'w') as fp:
     json.dump(data, fp)
 
-  global GLB_configuration 
   p=GLB_configuration["ongoingDB"]+".lock"
   if os.path.exists(p):
     os.remove(p)

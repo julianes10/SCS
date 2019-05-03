@@ -121,6 +121,7 @@ def main(configfile):
     helper.internalLogger.debug("Calling telepot.Bot...")
     global bot
     global chatidList
+    pt=None
     chatidList=[]
     bot = telebot.TeleBot(GLB_configuration["hash"])
     helper.internalLogger.debug("TeleBot returned")
@@ -169,7 +170,8 @@ def main(configfile):
     helper.einternalLogger.exception(e)  
     print('telegramBOT-General exeception captured. See log:{0}',format(cfg_log_exceptions))   
     _FINISHTASKS = True
-    pt.join()
+    if not pt==None:
+      pt.join()
     loggingEnd()
 
 
