@@ -1,0 +1,15 @@
+[Unit]
+Description = mjstreamer  launcher
+After = remote-fs.target network-online.target
+Wants = network-online.target
+
+[Service]
+User = pi
+Group = pi
+Type = simple
+ExecStart = /opt/PROJECT_NAME/mjpg-streamer/mjpg-streamer.daemon.sh /etc/mjpg-streamer.conf
+Restart = always
+RestartSec = 5
+
+[Install]
+WantedBy = multi-user.target
