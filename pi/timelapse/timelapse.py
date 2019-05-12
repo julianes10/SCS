@@ -285,40 +285,47 @@ def cleanProject(name):
     return rt
 '''----------------------------------------------------------'''
 @api.route('/',methods=["GET", "POST"])
-def home():
+@api.route('/timelapse/',methods=["GET", "POST"])
+def timelapse_home():
     if request.method == 'POST':
       helper.internalLogger.debug("Processing new request from a form...{0}".format(request.form))
       form2 = request.form.to_dict()
       helper.internalLogger.debug("Processing new request from a form2...{0}".format(form2))   
       requestNewOngoing(form2)
+    
+    url={}
 
     st=getStatus()
-    rt=render_template('index.html', title="TimeLapse Site",status=st,myvar="jjjjj")
+    rt=render_template('index.html', title="TimeLapse Site",status=st)
     return rt
 '''----------------------------------------------------------'''
 @api.route('/cancel',methods=["GET"])
-def gui_cancel():
+@api.route('/timelapse/cancel',methods=["GET"])
+def timelapse_gui_cancel():
    helper.internalLogger.debug("GUI Cancelling video...")
    cancelOngoing()
-   return redirect(url_for('home'))
+   return redirect(url_for('timelapse_home'))
 '''----------------------------------------------------------'''
 @api.route('/stop',methods=["GET"])
-def gui_stop():
+@api.route('/timelapse/stop',methods=["GET"])
+def timelapse_gui_stop():
    helper.internalLogger.debug("GUI Stopping video...")
    stopOngoing()
-   return redirect(url_for('home'))
+   return redirect(url_for('timelapse_home'))
 '''----------------------------------------------------------'''
 @api.route('/peek',methods=["GET"])
-def gui_peek():
+@api.route('/timelapse/peek',methods=["GET"])
+def timelapse_gui_peek():
    helper.internalLogger.debug("GUI Peeking video...")
    peekOngoing()
-   return redirect(url_for('home'))
+   return redirect(url_for('timelapse_home'))
 '''----------------------------------------------------------'''
 @api.route('/clean/<name>',methods=["GET"])
-def gui_clean(name):
+@api.route('/timelapse/clean/<name>',methods=["GET"])
+def timelapse_gui_clean(name):
    helper.internalLogger.debug("GUI clean {0}...".format(name))
    cleanProject(name)
-   return redirect(url_for('home'))
+   return redirect(url_for('timelapse_home'))
 
 '''----------------------------------------------------------'''
 '''--------    purgeProject                -----------------'''

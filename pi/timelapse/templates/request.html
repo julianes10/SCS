@@ -1,0 +1,10 @@
+<h2>Request a new timelapse¡</h2>
+<form action="{{ url_for('timelapse_home') }}" method = "POST">
+    <table>
+      <tr><td>Name (*)</td><td><input type=text name=name required></td></tr>
+      <tr><td>Interval (*)</td><td><input type=number name=interval required></td></tr>
+      <tr><td>Max number of pictures</td><td><input type=number name=maxNbrOfPictures></td></tr>
+      <tr><td>Max Record Time(s)</td><td><input type=number name=maxTime></td></tr> 
+     </table>
+     <input type=submit value="Request it">
+</form>

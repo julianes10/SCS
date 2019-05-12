@@ -1,0 +1,24 @@
+<h2>Ongoing timelapses</h2>
+{% if status.ongoing.name %}
+<table>
+   <tr><td>Name</td><td>{{status.ongoing.name}}</td></tr>
+   <tr><td>Status</td><td>{{status.ongoing.status}}</td></tr>
+   <tr><td>Interval(s)</td><td>{{status.ongoing.interval}}</td></tr>
+   <tr><td>Max Record Time(s)</td><td>{{status.ongoing.maxTime}}</td></tr>
+   <tr><td>Max number of pictures</td><td>{{status.ongoing.maxNbrOfPictures}}</td></tr>
+   <tr><td>Current number of pictures</td><td>{{status.ongoing.nbrOfPictures}}</td></tr>
+   {% if status.ongoing.firstPictureTime %}
+     <tr><td>First picture timestamp</td><td>{{status.ongoing.firstPictureTime|datetime}}</td></tr>
+     <tr><td>Last picture timestamp</td><td>{{status.ongoing.lastPictureTime|datetime}}</td></tr>
+   {% endif %}
+   {% if status.ongoing.video %}
+   <tr><td><a href="{{ url_for('static',filename=status.ongoing.video|videoURL) }}"> Peeked video </a></td></tr>
+   {% endif %}
+
+</table>
+   <form action="{{ url_for('timelapse_gui_peek') }}"> <input type="submit" value="PEEK" /></form>
+   <form action="{{ url_for('timelapse_gui_stop') }}"> <input type="submit" value="STOP" /></form>
+   <form action="{{ url_for('timelapse_gui_cancel') }}"> <input type="submit" value="CANCEL" /></form> 
+{% else %}
+No timelapse is running right now
+{% endif %}

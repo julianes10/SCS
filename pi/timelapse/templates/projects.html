@@ -1,0 +1,18 @@
+<h2>Available projects</h2>
+{% if status.projects %}
+<table>
+   <tr><th>Name</th><th>Pictures</th><th>Begin</th><th>End</th><th>Video</th><th>Delete All TODO</th></tr>
+   {% for prj in status.projects %} 
+   <tr>
+    <td>{{prj.name}}</td>
+    <td>{{prj.nbrOfPictures}}</td>
+    <td>{{prj.firstPictureTime|datetime}}</td>  
+    <td>{{prj.lastPictureTime|datetime}}</td>
+    <td><a href="{{ url_for('static',filename=prj.video|videoURL) }}"> video</a></td>
+    <td><form action="{{ url_for('timelapse_gui_clean',name=prj.name) }}"> <input type="submit" value="CLEAN" /></form></td>
+   </tr>
+   {% endfor %}
+</table>
+{% else %}
+No timelapse projects available so far.
+{% endif %}
