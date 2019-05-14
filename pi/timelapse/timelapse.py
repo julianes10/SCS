@@ -183,6 +183,13 @@ def getStatus():
     if "name" in ongoing:
       rt['disk']['ongoing']=getDirSize(GLB_configuration["mediaPath"]+"/"+ongoing["name"])    
 
+
+    global GLB_latestManualShooted
+    if  os.path.isfile(GLB_latestManualShooted):
+      rt["latestPhoto"]=GLB_latestManualShooted
+      rt["lastPictureTime"]=os.path.getmtime(GLB_latestManualShooted)
+
+
     UNLOCK(ongoing)
     return rt
 '''----------------------------------------------------------'''
@@ -327,6 +334,25 @@ def timelapse_gui_clean(name):
    cleanProject(name)
    return redirect(url_for('timelapse_home'))
 
+@api.route('/shoot',methods=["GET"])
+@api.route('/timelapse/shoot',methods=["GET"])
+def timelapse_triggerPhoto():
+  ongoing=LOCK() #Regardless is manual trigerred, better mutex with ongoing just in case 
+
+  global GLB_latestManualShooted
+  global GLB_latestManualShootedDateTime 
+  #delete if any latest
+  try:
+    remove(GLB_latestManualShooted)
+  except Exception as e:
+    helper.internalLogger.critical("Error cleaning: {0}.".format(GLB_latestManualShooted))
+    helper.einternalLogger.exception(e)
+  #select a new name to avoid cache issues
+  GLB_latestManualShooted= GLB_configuration["mediaPath"]+"/latest.jpg."+str(time.time())
+  #take photo
+  takePhoto(GLB_latestManualShooted)
+  UNLOCK(ongoing)  
+  return redirect(url_for('timelapse_home'))
 '''----------------------------------------------------------'''
 '''--------    purgeProject                -----------------'''
 '''----------------------------------------------------------'''
@@ -428,6 +454,14 @@ def generateVideo(ongoing,cleanUp,closeOngoing):
     updateProjectsWithOngoing(ongoing)
 
 
+'''----------------------------------------------------------'''
+'''----------------       takefPhoto      -------------------'''
+'''----------------------------------------------------------'''
+def takePhoto(outfile):
+  helper.internalLogger.debug("Taking photo:{0}".format(outfile))
+  cmd=GLB_configuration["takePhotoCmd"].replace("PARAMETER_OUTFILE",outfile)
+  subprocess.call(['bash','-c',cmd])
+  # TODO return error if happen
 
 
 '''----------------------------------------------------------'''
@@ -462,9 +496,12 @@ def updateOngoing(ongoing):
         # directory already exists
         pass
 
-  helper.internalLogger.debug("Ongoing {0}, taking photo:{1}".format(ongoing["name"],pathfile))
-  cmd=GLB_configuration["takePhotoCmd"].replace("PARAMETER_OUTFILE",pathfile)
-  subprocess.call(['bash','-c',cmd])
+
+  takePhoto(pathfile)
+  
+  #TODO CONTROL ERRORS
+  ongoing["latestPhoto"]=pathfile
+
 
 
   # It may terminate by date or number of pictures
@@ -543,6 +580,10 @@ def main(configfile):
 
 
   global GLB_configuration
+
+  global GLB_latestManualShooted
+
+  GLB_latestManualShooted="none"
 
 
   # Let's fetch data

@@ -1,7 +1,7 @@
 <h2>Available projects</h2>
 {% if status.projects %}
 <table>
-   <tr><th>Name</th><th>Pictures</th><th>Begin</th><th>End</th><th>Video</th><th>Delete All TODO</th></tr>
+   <tr><th>Name</th><th>Pictures</th><th>Begin</th><th>End</th><th>Video</th><th>Delete</th></tr>
    {% for prj in status.projects %} 
    <tr>
     <td>{{prj.name}}</td>

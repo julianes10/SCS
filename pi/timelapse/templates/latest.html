@@ -1,0 +1,15 @@
+<div class="latest">
+{% if status.ongoing.latestPhoto %}
+  <img src="{{ url_for('static',filename=status.ongoing.latestPhoto|videoURL) }}" />
+  <br>Last picture used in timelapse:  {{status.ongoing.lastPictureTime|datetime}}
+{% else %}
+  {% if status.latestPhoto %}
+    <img src="{{ url_for('static',filename=status.latestPhoto|videoURL) }}" />
+    <br>Last picture triggered manually:  {{status.lastPictureTime|datetime}}
+  {% else %}
+    <br>Not latest photo to show, trigger one manually or launch a timelapse
+  {% endif %}
+{% endif %}
+<br><form action="{{ url_for('timelapse_triggerPhoto') }}"> <input type="submit" value="SHOOT" /></form></
+</div>
+
