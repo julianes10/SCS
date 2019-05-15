@@ -1,13 +1,45 @@
-<!-- index.html -->
-
-{% block content %}
+<!doctype html>
+<html>
+    <head>
+      <title>Timelapse Web Interface</title>
+      <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+      <script src="{{url_for('static', filename='tabsmgt.js')}}"></script>
+    </head>
+<body onload="openTab(event, 'latest')">
 <div class="container">
-<h1>TimeLapse Web Interface</h1>
-{% include "latest.html" %}
-{% include "ongoing.html" %}
-{% include "projects.html" %}
-{% include "disk.html" %}
-{% include "request.html" %}
-</div>
+  <h1>Timelapse Web Interface</h1>
 
-{% endblock %}
+  <!-- Tab links -->
+  <div class="tab">
+    <button class="tablinks" onclick="openTab(event, 'latest')">Latest Picture</button>
+    <button class="tablinks" onclick="openTab(event, 'ongoing')">Ongoing</button>
+    <button class="tablinks" onclick="openTab(event, 'projects')">Projects</button>
+    <button class="tablinks" onclick="openTab(event, 'request')">New Request</button>
+    <button class="tablinks" onclick="openTab(event, 'disk')">Disk</button>
+  </div>
+
+
+  <!-- Tab content -->
+  <div id="latest" class="tabcontent">
+    {% include "latest.html" %}
+  </div>
+
+  <div id="ongoing" class="tabcontent">
+    {% include "ongoing.html" %}
+  </div>
+
+  <div id="projects" class="tabcontent">
+    {% include "projects.html" %}
+  </div>
+
+  <div id="request" class="tabcontent">
+    {% include "request.html" %}
+  </div>
+
+  <div id="disk" class="tabcontent">
+    {% include "disk.html" %}
+  </div>
+
+</div>
+</body>
+</html>
