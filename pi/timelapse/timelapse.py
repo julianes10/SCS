@@ -343,7 +343,7 @@ def timelapse_triggerPhoto():
   global GLB_latestManualShootedDateTime 
   #delete if any latest
   try:
-    remove(GLB_latestManualShooted)
+    os.remove(GLB_latestManualShooted)
   except Exception as e:
     helper.internalLogger.critical("Error cleaning: {0}.".format(GLB_latestManualShooted))
     helper.einternalLogger.exception(e)
