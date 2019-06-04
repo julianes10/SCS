@@ -40,7 +40,7 @@ def periodicTasks():
 '''----------------------------------------------------------'''
 '''----------------    runAction            -----------------'''
 
-def runAction(chatid,action):
+def runAction(chatid,action,originalMsg):
   try:
     cmd=action["cmd"]
     global bot
@@ -55,29 +55,56 @@ def runAction(chatid,action):
 
   helper.internalLogger.debug("Let's respond with associated info to action{0}".format(action))
 
+  #Coding up to 5 retrials
+  retry=0
+  while retry < 5:
+    try:
+      feedback=False
+      if "video" in action: 
+        if os.path.isfile(action["video"]):
+          f = open(action["video"], 'rb')
+          bot.send_video(chatid,f)    
+          f.close()  
+          feedback=True
+      if "image" in action:
+        helper.internalLogger.debug("Action with image")
+        if os.path.isfile(action["image"]):
+          helper.internalLogger.debug("File: {0}".format(action["image"]))
+          f = open(action["image"], 'rb')
+          bot.send_photo(chatid, f)
+          f.close()
+          feedback=True
+      if "text" in action:
+        if os.path.isfile(action["text"]):
+          f = open(action["text"], 'r')
+          t = f.read()
+          bot.send_message(chatid,t)
+          f.close()        
+          feedback=True
 
-  if "video" in action: 
-    if os.path.isfile(action["video"]):
-      f = open(action["video"], 'rb')
-      bot.send_video(chatid,f)    
-      f.close()  
-  if "image" in action:
-    helper.internalLogger.debug("Action with image")
-    if os.path.isfile(action["image"]):
-      helper.internalLogger.debug("File: {0}".format(action["image"]))
-      f = open(action["image"], 'rb')
-      bot.send_photo(chatid, f)
-      f.close()
-  if "text" in action:
-    if os.path.isfile(action["text"]):
-      f = open(action["text"], 'r')
-      t = f.read()
-      bot.send_message(chatid,t)
-      f.close()        
+      if len(result)>0:
+        bot.send_message(chatid,result)
+        helper.internalLogger.debug("Action: {0} executed, send output".format(action,result))
+        feedback=True
 
-  if len(result)>0:
-    bot.send_message(chatid,result)
-    helper.internalLogger.debug("Action: {0}".format(action))
+      if not feedback:
+        helper.internalLogger.debug("Silent or buggy action executed: {0}".format(action))
+        bot.send_message(chatid,"Action just executed")
+
+
+
+      break  #No exceptions, no retrials
+
+    except Exception as e:
+      retry=retry+1
+      e = sys.exc_info()[0]
+      helper.internalLogger.critical('Error: Exception using API {0}. Attempt {1}'.format(action,retry))
+      helper.einternalLogger.exception(e)  
+      #bot.send_message(chatid,'Error: Exception executing {0}'.format(action))
+
+  if retry==5:
+    bot.send_message(chatid,"No feedback action after {0} retrials".format(retry))
+
 
 
   helper.internalLogger.debug("Action ended")
@@ -130,7 +157,9 @@ def main(configfile):
     @bot.message_handler(func=lambda message: True)
     def process_all(message):
       global chatidList
-      msg=message.text.lower()
+      msgFull=message.text.lower()
+      msgList=msgFull.split()
+      msg=msgList[0]
       if "start" in msg:
         if message.chat.id in chatidList:
           bot.send_message(message.chat.id, "Hello my friend, BOT was already started for you")
@@ -144,9 +173,10 @@ def main(configfile):
       else:
         for key,item in GLB_configuration["actions"].items():
           if key in GLB_configuration["menu"]:
-            if key in msg:
+            helper.internalLogger.debug("Checking key '{0}' and msg {1}".format(key,msg))
+            if msg == key.lower():
               helper.internalLogger.debug("Command '{0}' executed".format(key))
-              runAction(message.chat.id,item)    
+              runAction(message.chat.id,item,message.text)    
               return     
         bot.reply_to(message, "Ignoring this request.")
 
