@@ -2,14 +2,23 @@
   "log": { "logTraces":"/tmp/telegram.log",
            "logExceptions":"/tmp/telegrame.log"
   },
-  "hash":<HASH>,
-  "menu" : ["foto","date","test"],
+  "port":5061,
+  "host":"0.0.0.0",
+  "ongoingDB":"/tmp/telegramBOT.ongoing",
+  "hash":<hash>,
+  "menu" : ["foto","fotoHD","fotoFHD","foto2K","date","test","run"],
+  "pollingTimeout" : 10,
   "actions" : { 
     "date"  : { "cmd" : "date"},
-    "foto"  : { "cmd" : "fswebcam -r 1280x720 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
-    "test"  : { "cmd" : "echo hola-esto-es-un-test"}
+    "foto"  : { "cmd" : "fswebcam -r  400x300 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
+    "fotoHD": { "cmd" : "fswebcam -r  1280x720 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
+    "fotoFHD": { "cmd" : "fswebcam -r 1920×1080  --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
+    "foto2K": { "cmd" : "fswebcam -r  2048x1080  --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
+    "test"  : { "cmd" : "echo hola-esto-es-un-test"},
+    "run"  : { "cmd" : "TELEGRAM_COMMAND"}
   },
   "periodic-static-actions" : {
-    "test"  : { "action" : "date","interval":10}
+    "default"  : { "action" : "date","interval":10}
   }
 }
+
