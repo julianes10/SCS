@@ -7,6 +7,7 @@
   "actions" : { 
     "date"  : { "cmd" : "date"},
     "foto"  : { "cmd" : "takePiVideo.py /tmp/img", "image": "/tmp/img"},
+    "foto"  : { "cmd" : "/opt/smartCam/picam/raspistillForce.sh -w 1920 -h 1080 -awb auto -ex auto -vf -hf -o /tmp/img", "image": "/tmp/img"},
     "test"  : { "cmd" : "echo hola-esto-es-un-test"}
   },
   "periodic-static-actions" : {
