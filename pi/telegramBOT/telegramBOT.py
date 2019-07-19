@@ -98,29 +98,30 @@ def periodicTasks():
   global chatidList
   helper.internalLogger.debug("TeleBot periodic start")
   while not _FINISHTASKS:
+    for key,item in GLB_configuration["periodic-static-actions"].items():
+        time.sleep(1)
+        ''' 
+        # TODO check if it is time to execute this action item.interval 
+        # TODO runAction     result=runAction(item,message.text)  
+        TODO send to subscribers or force broadcast
 
-   for key,item in GLB_configuration["actions"].items():
-          if key in GLB_configuration["menu"]:
-            helper.internalLogger.debug("Checking key '{0}' and msg {1}".format(key,msg))
-            if msg == key.lower():
-              helper.internalLogger.debug("Command '{0}' executed".format(key))
-              result=runAction(item,message.text)  
+        # iterate tasks, run commands if applied and send to peers subscribed.
+        helper.internalLogger.debug("TeleBot periodic")
+        if len(chatidList)>0:
+          for i in chatidList:
+            runAction(i,GLB_configuration["actions"][GLB_configuration["periodic-static-actions"]   ["default"]["action"]])
+          time.sleep(GLB_configuration["periodic-static-actions"]["default"]["interval"])
+  
               if result is None:
                    bot.send_message(message.chat.id,'Error: Exception executing {0}'.format(key))
               else:
                   sendActionResult(message.chat.id,item,result)    
               return     
-        bot.reply_to(message, "Ignoring this request.")
-    time.sleep(1)
+          bot.reply_to(message, "Ignoring this request.")
+        '''
 
 
-    ## iterate tasks, run commands if applied and send to peers subscribed.
-    helper.internalLogger.debug("TeleBot periodic")
-    if len(chatidList)>0:
-      for i in chatidList:
-        runAction(i,GLB_configuration["actions"][GLB_configuration["periodic-static-actions"]["default"]["action"]])
-    time.sleep(GLB_configuration["periodic-static-actions"]["default"]["interval"])
-
+  
 
 
 '''----------------------------------------------------------'''
@@ -164,6 +165,8 @@ def sendActionResult(chatid,action,result):
           bot.send_video(chatid,f)    
           f.close()  
           feedback=True
+        else: 
+          bot.send_message(chatid,"No video available, sorry")
       if "image" in action:
         helper.internalLogger.debug("Action with image")
         if os.path.isfile(action["image"]):
@@ -172,6 +175,8 @@ def sendActionResult(chatid,action,result):
           bot.send_photo(chatid, f)
           f.close()
           feedback=True
+        else: 
+          bot.send_message(chatid,"No image available, sorry")
       if "text" in action:
         if os.path.isfile(action["text"]):
           f = open(action["text"], 'r')
@@ -179,7 +184,8 @@ def sendActionResult(chatid,action,result):
           bot.send_message(chatid,t)
           f.close()        
           feedback=True
-
+        else:
+          bot.send_message(chatid,"No text available, sorry")
       if len(result)>0:
         bot.send_message(chatid,result)
         helper.internalLogger.debug("Action: {0} executed, send output".format(action,result))
@@ -302,6 +308,7 @@ def main(configfile):
       msgFull=message.text.lower()
       msgList=msgFull.split()
       msg=msgList[0]
+      # Some built-ins options
       if "start" in msg:
         if message.chat.id in chatidList:
           bot.send_message(message.chat.id, "Hello my friend, BOT was already started for you")
@@ -312,7 +319,15 @@ def main(configfile):
         if message.chat.id in chatidList:
           chatidList.remove(message.chat.id)
         bot.send_message(message.chat.id, "That's all folk, see you later")
+      elif "help" in msg:
+        options="Menu options:"
+        for key,item in GLB_configuration["actions"].items():
+          if (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False):
+            if key in GLB_configuration["menu"]:
+              options=options+'\n'+key
+        bot.send_message(message.chat.id, options)
       else:
+        # Custom by configuration options
         for key,item in GLB_configuration["actions"].items():
           if key in GLB_configuration["menu"]:
             helper.internalLogger.debug("Checking key '{0}' and msg {1}".format(key,msg))
