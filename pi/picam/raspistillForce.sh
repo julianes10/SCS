@@ -8,7 +8,7 @@ then
   relaunch=1
 fi
 
-echo "Running raspistill with options $@...."
+#echo "Running raspistill with options $@...."
 
 raspistill $@
 
