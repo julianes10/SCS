@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+    <head>
+      <title>Telegram Web Interface</title>
+      <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+      <script src="{{url_for('static', filename='tabsmgt.js')}}"></script>
+    </head>
+<body onload="openTab(event, 'latest')">
+<div class="container">
+  <h1>TelegramBOT Web Interface</h1>
+
+  <!-- Tab links -->
+  <div class="tab">
+    <button class="tablinks" onclick="openTab(event, 'status')">Status</button>
+    <button class="tablinks" onclick="openTab(event, 'request')">New Request</button>
+  </div>
+
+
+  <!-- Tab content -->
+  <div id="latest" class="tabcontent">
+    {% include "status.html" %}
+  </div>
+
+  <div id="status" class="tabcontent">
+    {% include "status.html" %}
+  </div>
+
+  <div id="request" class="tabcontent">
+    {% include "request.html" %}
+  </div>
+
+</div>
+</body>
+</html>

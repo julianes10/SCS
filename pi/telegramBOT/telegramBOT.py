@@ -106,20 +106,12 @@ def periodicTasks():
         TODO send to subscribers or force broadcast
 
         # iterate tasks, run commands if applied and send to peers subscribed.
+        '''
         helper.internalLogger.debug("TeleBot periodic")
         if len(chatidList)>0:
           for i in chatidList:
             runAction(i,GLB_configuration["actions"][GLB_configuration["periodic-static-actions"]   ["default"]["action"]])
           time.sleep(GLB_configuration["periodic-static-actions"]["default"]["interval"])
-  
-              if result is None:
-                   bot.send_message(message.chat.id,'Error: Exception executing {0}'.format(key))
-              else:
-                  sendActionResult(message.chat.id,item,result)    
-              return     
-          bot.reply_to(message, "Ignoring this request.")
-        '''
-
 
   
 
