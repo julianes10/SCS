@@ -6,7 +6,7 @@
   "host":"0.0.0.0",
   "ongoingDB":"/tmp/telegramBOT.ongoing",
   "hash":<HASH>,
-  "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run"],
+  "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run","mem"],
   "pollingTimeout" : 10,
   "actions" : { 
     "foto"  : { "cmd" : "fswebcam -r  400x300 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
@@ -16,10 +16,12 @@
     "time"  : { "cmd" : "date"},
     "uptime"  : { "cmd" : "uptime"},
     "test"  : { "cmd" : "echo hola-esto-es-un-test", "hidden":false},
+    "mem"  : { "cmd" : "free -h"},
     "run"  : { "cmd" : "TELEGRAM_COMMAND","hidden":true}
   },
-  "periodic-static-actions" : {
-    "default"  : { "action" : "test","interval":10}
-  }
+  "periodic" : [
+    { "action" : "test","interval":30, "start" : "09:00:00"},
+    { "action" : "fotoHD","interval":60, "start" : "09:00:00"}
+  ]
 }
 
