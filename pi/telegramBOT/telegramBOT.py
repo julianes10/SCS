@@ -139,7 +139,9 @@ def periodicTasks():
       ## Tunning firstime
       if not "firstTime" in item:
         item["nbrOfTimes"] = 0
-        item["subscribers"] = []
+        item["nbrOfTimesWithSubscribers"] = 0
+        if not "subscribers" in item:
+          item["subscribers"] = []
         helper.internalLogger.debug("Tunning firstTime for action {0}...".format(item["action"]))
         if not "start" in item:
           item["firstTime"] = now
@@ -170,6 +172,7 @@ def periodicTasks():
         item["lastTime"]=now
         item["nbrOfTimes"] = item["nbrOfTimes"] + 1
         if len(item["subscribers"])>0:
+          item["nbrOfTimesWithSubscribers"] = item["nbrOfTimesWithSubscribers"] + 1
           result=runAction(GLB_configuration["actions"][item["action"]],"AUTO")
           for i in item["subscribers"]:
             if result is None:
@@ -299,17 +302,19 @@ def LOCK():
   except Exception as e:
       helper.internalLogger.critical("Error opening ongoingDB: {0}.".format(GLB_configuration["ongoingDB"]))
       helper.einternalLogger.exception(e)
-  
+  #helper.internalLogger.debug("LOCKLOCKLOCKLOCK {0}.".format(rt))
   return rt
 
 '''----------------------------------------------------------'''
 def UNLOCK(data):
+  #helper.internalLogger.debug("UNLOCKUNLOCKUNLOCKUNLOCK {0}.".format(data))
   with open(GLB_configuration["ongoingDB"], 'w') as fp:
     json.dump(data, fp)
 
   p=GLB_configuration["ongoingDB"]+".lock"
   if os.path.exists(p):
     os.remove(p)
+
 
 
 '''----------------------------------------------------------'''
@@ -331,7 +336,19 @@ def delSubscriber(id,actionName):
         i["subscribers"].remove(id)
       else:
         bot.send_message(id,'Your are not subscribed to {0} action.'.format(i["action"]))
+
+
+  #bk subscribers nv
+  try:
+   with open(GLB_configuration["ongoingDBNV"], 'w+') as fp:
+    json.dump(ongoing, fp)
+  except Exception as e:
+      helper.internalLogger.critical("Error opening ongoingDBNV")
+      helper.einternalLogger.exception(e)
+
   UNLOCK(ongoing)
+
+
   
 '''----------------------------------------------------------'''
 def addSubscriber(id,actionName):
@@ -353,8 +370,56 @@ def addSubscriber(id,actionName):
         bot.send_message(id,'Your are now subscribed to {0} action.'.format(i["action"]))
         i["subscribers"].append(id)
 
+  try:
+   with open(GLB_configuration["ongoingDBNV"], 'w+') as fp:
+    json.dump(ongoing, fp)
+  except Exception as e:
+      helper.internalLogger.critical("Error opening ongoingDBNV")
+      helper.einternalLogger.exception(e)
+
   #helper.internalLogger.critical('ongoing {0}'.format(ongoing))
   UNLOCK(ongoing)
+  
+
+
+
+
+
+'''----------------------------------------------------------'''
+def recoverOngoingTasks():
+
+  UNLOCK({}) # cleanup
+  ongoing=LOCK()
+  
+  if "periodic" in GLB_configuration:
+    ongoing["periodic"]=GLB_configuration["periodic"]
+    # Recover form non-volatile information if any
+    tmp={}
+    try:
+      with open(GLB_configuration["ongoingDBNV"]) as json_data:
+          tmp = json.load(json_data)
+    except Exception as e:
+      helper.internalLogger.critical("Error opening ongoingDBNV. Subscriptions are reset")
+      helper.einternalLogger.exception(e)
+      
+    # Check that every action is still in new configuration
+    try:
+     for itemCfg in ongoing["periodic"]:
+      helper.internalLogger.debug("Recovering subscribers for action {0}....".format(itemCfg["action"]))
+      for itemNV in tmp["periodic"]:
+        if itemNV["action"] == itemCfg["action"]:
+          #Update subscribers
+          itemCfg["subscribers"] = itemNV["subscribers"]
+          helper.internalLogger.debug("Recovered subscribers for action {0}:{1}.".format(itemCfg["action"],itemCfg["subscribers"]))
+          break
+    except Exception as e:
+      helper.internalLogger.critical("Error crosschecking ongoingNV")
+      helper.einternalLogger.exception(e)
+
+
+  ##helper.internalLogger.debug("GGGGGGGGGGGGGGGGGGG {0}.".format(ongoing))
+  UNLOCK(ongoing)
+
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
@@ -384,13 +449,9 @@ def main(configfile):
   print('See logs debugs in: {0} and exeptions in: {1}-----------'.format(cfg_log_debugs,cfg_log_exceptions))  
   helper.internalLogger.critical('telegramBOT-start -------------------------------')  
   helper.einternalLogger.critical('telegramBOT-start -------------------------------')
-  UNLOCK({}) # cleanup
-  ongoing=LOCK()
-  ongoing={}
-  if "periodic" in GLB_configuration:
-    ongoing["periodic"]=GLB_configuration["periodic"]
-  UNLOCK(ongoing)
 
+
+  recoverOngoingTasks()
 
   try:    
     logging.getLogger("requests").setLevel(logging.DEBUG)
@@ -450,15 +511,12 @@ def main(configfile):
           if (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False):
             if key in GLB_configuration["menu"]:
               options=options+'\n  '+key
-        options=options+'\n'"Start/Stop all or specific periodic action:*"
+        options=options+'\n'"Start/Stop all or specific periodic action:"
         for item in GLB_configuration["periodic"]:
           if (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False):
-            options=options+'\n'"  " + item["action"]+ ". Interval(s) " + str(item["interval"])
+            options=options+'\n'"  " + item["action"]+ ". Each " + str(item["interval"]) + "(s)"
             if "start" in item:
-              options=options+ ". Starting at " + item["start"]
-            else:
-              options=options+ ". Starting now"
-
+              options=options+ ". Since " + item["start"]
         bot.send_message(message.chat.id,options)
       else:
         # Custom by configuration options
