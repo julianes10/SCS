@@ -28,7 +28,7 @@ _FINISHTASKS=False
 
 {"periodic": [
   {"action": "test", "interval": 7200, "start": "01:00:00", "nbrOfTimes": 0, 
-  "subscribers": [], "firstTime": 1566428400.0, "lastTime": 1566428400.0}, 
+  "subscribers": [], "nexttime": 1566428400.0}, 
   {"action": "mem"...........
  ]
 }
@@ -137,39 +137,36 @@ def periodicTasks():
     now=time.time()
     for item in ongoing["periodic"]:
       ## Tunning firstime
-      if not "firstTime" in item:
+      if not "nextTime" in item:
         item["nbrOfTimes"] = 0
         item["nbrOfTimesWithSubscribers"] = 0
         if not "subscribers" in item:
           item["subscribers"] = []
-        helper.internalLogger.debug("Tunning firstTime for action {0}...".format(item["action"]))
+        helper.internalLogger.debug("Tunning nextTime for action {0}...".format(item["action"]))
         if not "start" in item:
-          item["firstTime"] = now
-          item["lastTime"] = item["firstTime"]
-          helper.internalLogger.debug("No explicit start so, firstTime for action is now {0}...".format(item["firstTime"]))
+          item["nextTime"] = now
+          helper.internalLogger.debug("No explicit start so, nextTime for action is now {0}...".format(item["nextTime"]))
         else:
           aux=time.localtime()
           t=(aux.tm_year,aux.tm_mon,aux.tm_mday,0,0,0,aux.tm_wday,aux.tm_yday,0)
           nowToday00=time.mktime(t)
           datetime_str="1/1/1970 " + item["start"] + " +0100"
           aux2 = datetime.strptime(datetime_str, '%m/%d/%Y %H:%M:%S %z')
-          item["firstTime"] = nowToday00 + datetime.timestamp(aux2)     
+          item["nextTime"] = nowToday00 + datetime.timestamp(aux2)     
           #Now check nearest slot based on interval
-          helper.internalLogger.debug("Explicit start at {0}, firstTime for action is  {1}-{2}...".format(item["start"],item["firstTime"],datetime.fromtimestamp(item["firstTime"])))    
-          while (now > (item["firstTime"]+item["interval"])):
-            item["firstTime"]=item["firstTime"]+item["interval"]           
-          helper.internalLogger.debug("Explicit FIXED start at {0}, firstTime for action is  {1}-{2}...".format(item["start"],item["firstTime"],datetime.fromtimestamp(item["firstTime"])))    
-          item["lastTime"] = item["firstTime"]  
+          helper.internalLogger.debug("Explicit start at {0}, nextTime for action is  {1}-{2}...".format(item["start"],item["nextTime"],datetime.fromtimestamp(item["nextTime"])))    
+          while (now > (item["nextTime"])):
+            item["nextTime"]=item["nextTime"]+item["interval"]           
+          helper.internalLogger.debug("Explicit FIXED start at {0}, nextTime for action is  {1}-{2}...".format(item["start"],item["nextTime"],datetime.fromtimestamp(item["nextTime"])))    
 
       ## Triggering when is fair
-      if ( (item["firstTime"] == now ) or 
-           ((item["lastTime"] + item["interval"]) < now)  ):  
+
+      if ( item["nextTime"] <= now ):
         helper.internalLogger.debug("Time for periodic action {0}...".format(item["action"]))
         helper.internalLogger.debug("EVAL: now       {0} \t| {1}".format(now,datetime.fromtimestamp(now)))
-        helper.internalLogger.debug("EVAL: firstTime {0} \t\t| {1}".format(item["firstTime"],datetime.fromtimestamp(item["firstTime"])))
-        helper.internalLogger.debug("EVAL: lastTime  {0} \t\t| {1}".format(item["lastTime"],datetime.fromtimestamp(item["lastTime"])))
+        helper.internalLogger.debug("EVAL: nextTime {0} \t\t| {1}".format(item["nextTime"],datetime.fromtimestamp(item["nextTime"])))
         helper.internalLogger.debug("EVAL: interval  {0}".format(item["interval"]))
-        item["lastTime"]=now
+        item["nextTime"]=item["nextTime"]+item["interval"]        
         item["nbrOfTimes"] = item["nbrOfTimes"] + 1
         if len(item["subscribers"])>0:
           item["nbrOfTimesWithSubscribers"] = item["nbrOfTimesWithSubscribers"] + 1
@@ -526,7 +523,7 @@ def main(configfile):
         # Custom by configuration options
         for key,item in GLB_configuration["actions"].items():
           if key in GLB_configuration["menu"]:
-            helper.internalLogger.debug("Checking key '{0}' and msg {1}".format(key,msg))
+            #helper.internalLogger.debug("Checking key '{0}' and msg {1}".format(key,msg))
             if msg == key.lower():
               if start:
                 helper.internalLogger.debug("Start subscription to action {0}".format(key))

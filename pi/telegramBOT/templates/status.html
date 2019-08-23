@@ -1,7 +1,7 @@
 <h2>TelegramBOT status</h2>
 {% if status.periodic %}
 <table>
-   <tr><th>Action</th><th>Interval</th><th>Start</th><th>#Attempts</th><th>#Executions</th><th>First</th><th>Last</th><th>Subscribers</th><th>Clean Subscribers</th></tr>
+   <tr><th>Action</th><th>Interval</th><th>Start</th><th>#Attempts</th><th>#Executions</th><th>Next</th><th>Subscribers</th><th>Clean Subscribers</th></tr>
    {% for prj in status.periodic %} 
    <tr>
     <td>{{prj.action}}</td>
@@ -9,8 +9,7 @@
     <td>{{prj.start}}</td>
     <td>{{prj.nbrOfTimes}}</td>
     <td>{{prj.nbrOfTimesWithSubscribers}}</td>
-    <td>{{prj.firstTime|datetime}}</td>  
-    <td>{{prj.lastTime|datetime}}</td>
+    <td>{{prj.nextTime|datetime}}</td>  
     <td>{{prj.subscribers}}</td>
     <td><form action="{{ url_for('telegramBOT_gui_clean',name=prj.action) }}"> <input type="submit" value="CLEAN" />
     </form></td>
