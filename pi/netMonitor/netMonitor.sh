@@ -40,7 +40,7 @@ while true; do
   pingresult=$?
   if [ $pingresult -eq 0 ]
   then
-      echo "Success pinging $HOST2MONITOR after $consecutiveFailures failures" | tee >(logger -t $0)
+      #echo "Success pinging $HOST2MONITOR after $consecutiveFailures failures" | tee >(logger -t $0)
       consecutiveFailures=0
       totalSuccess=$((totalSuccess+1))
   else
@@ -59,9 +59,9 @@ while true; do
   fi
 
   #Update latest report
-  echo "TotalSuccess=$totalSuccess">/tmp/netMonitor.status
-  echo "TotalFailures=$totalFailures">>/tmp/netMonitor.status
-  echo "ConsecutiveFailures=$consecutiveFailures">>/tmp/netMonitor.status
+  echo "TotalSuccess=$totalSuccess">$LOGSTATUS
+  echo "TotalFailures=$totalFailures">>$LOGSTATUS
+  echo "ConsecutiveFailures=$consecutiveFailures">>$LOGSTATUS
   sleep $nextSleep
 done
 
