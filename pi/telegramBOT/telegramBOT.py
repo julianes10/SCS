@@ -505,19 +505,23 @@ def main(configfile):
           msg=msgList[1]
           stop=True
 
-      if "help" in msg:
+      if "help" in msg or "helphidden" in msg:
+
         options="On demand menu actions:"
         for key,item in GLB_configuration["actions"].items():
-          if (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False):
+          if ( (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False)) or ("helphidden" in msg):
             if key in GLB_configuration["menu"]:
               options=options+'\n  '+key
+
         options=options+'\n'"Start/Stop all or specific periodic action:"
         for item in GLB_configuration["periodic"]:
-          if (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False):
+          if ( (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False)) or ("helphidden" in msg):
             options=options+'\n'"  " + item["action"]+ ". Each " + str(item["interval"]) + "(s)"
             if "start" in item:
               options=options+ ". Since " + item["start"]
+
         bot.send_message(message.chat.id,options)
+
       else:
         # Custom by configuration options
         for key,item in GLB_configuration["actions"].items():

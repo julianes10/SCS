@@ -5,7 +5,8 @@
   "port":5061,
   "host":"0.0.0.0",
   "ongoingDB":"/tmp/telegramBOT.ongoing",
-  "hash":<HASH>,
+  "ongoingDBNV":"/tmp/telegramBOT.ongoingNV",
+  "hash":"asdf,
   "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run","mem"],
   "pollingTimeout" : 10,
   "actions" : { 
@@ -20,8 +21,11 @@
     "run"  : { "cmd" : "TELEGRAM_COMMAND","hidden":true}
   },
   "periodic" : [
-    { "action" : "test","interval":30, "start" : "09:00:00"},
-    { "action" : "fotoHD","interval":60, "start" : "09:00:00"}
+    { "action" : "test","interval":7200, "start" : "01:00:00"},
+    { "action" : "mem","interval":40},
+    { "action" : "fotoHD","interval":60, "start" : "01:26:00"},
+    { "action" : "foto","interval":3600, "start" : "05:00:00"}
   ]
 }
+
 
