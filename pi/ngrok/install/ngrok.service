@@ -1,0 +1,15 @@
+[Unit]
+Description = ngrok2222 launcher
+After = remote-fs.target network-online.target
+Wants = network-online.target
+
+[Service]
+User = pi
+Group = pi
+Type = simple
+ExecStart = /home/pi/ngrok tcp 22
+Restart = always
+RestartSec = 5
+
+[Install]
+WantedBy = multi-user.target
