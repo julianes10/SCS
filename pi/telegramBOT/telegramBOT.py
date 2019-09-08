@@ -27,9 +27,13 @@ _FINISHTASKS=False
 ------------- ongoing fields
 
 {"periodic": [
-  {"action": "test", "interval": 7200, "start": "01:00:00", "nbrOfTimes": 0, 
+  {"action": "test", "interval": 7200, "start": "01:00:00", "nbrOfTimes": 0,  "nbrOfTimesWithSubscribers": 0, 
   "subscribers": [], "nexttime": 1566428400.0}, 
-  {"action": "mem"...........
+  ... 
+ ]
+"events": [
+  {"name": "kk", "nbrOfTimes": 0, "nbrOfTimes": 0,"nbrOfTimesWithSubscribers": 0, "subscribers": []}, 
+  ...
  ]
 }
 '''
@@ -55,38 +59,18 @@ api.jinja_env.filters['datetime'] = format_datetime
 
 
 '''----------------------------------------------------------'''
-@api.route('/api/v1.0/telegramBOT/action', methods=['POST'])
-def post_telegram_action():
+@api.route('/api/v1.0/telegramBOT/event', methods=['POST'])
+def post_telegram_event():
     if not request.json:
         helper.internalLogger.debug("It is not a json. Back with error")
         abort(400)
-    return requestNewAction(request.json)
+    return requestNewEvent(request.json)
 
 
-def requestNewAction(req):
-    #TODO 
+def requestNewEvent(req):
+    #TODO control error
     rt=jsonify({'result': 'OK'})
-
-    if not "action" in req:
-        rt=jsonify({'result': 'KO'})
-    else:
-      helper.internalLogger.debug("NEW timelapse is requested. Autocanceling current one if any")
-      if "name" in ongoing:
-        cleanUpOngoing(ongoing["name"],True,True)
-        helper.internalLogger.debug("DELETING existing ones with same name if any")
-        purgeProject(ongoing["name"])
-      ongoing.clear()
-      ongoing["name"]=req["name"]
-      ongoing["interval"]=int(req["interval"])
-      if "maxTime" in req:
-       if req["maxTime"] != "": 
-        ongoing["maxTime"]=int(req["maxTime"])
-      if "maxNbrOfPictures" in req:
-       if req["maxNbrOfPictures"] != "":
-        ongoing["maxNbrOfPictures"]=int(req["maxNbrOfPictures"])
-      ongoing["status"]="ONGOING"
-      cleanUpOngoing(ongoing["name"],True,True)
-    UNLOCK(ongoing) 
+    eventTask(req)
     return rt
 
 '''----------------------------------------------------------'''
@@ -97,7 +81,7 @@ def telegramBOT_home():
       helper.internalLogger.debug("Processing new request from a form...{0}".format(request.form))
       form2 = request.form.to_dict()
       helper.internalLogger.debug("Processing new request from a form2...{0}".format(form2))   
-      requestNewAction(form2)
+      requestNewEvent(form2)
     
     url={}
 
@@ -138,8 +122,6 @@ def periodicTasks():
     for item in ongoing["periodic"]:
       ## Tunning firstime
       if not "nextTime" in item:
-        item["nbrOfTimes"] = 0
-        item["nbrOfTimesWithSubscribers"] = 0
         if not "subscribers" in item:
           item["subscribers"] = []
         helper.internalLogger.debug("Tunning nextTime for action {0}...".format(item["action"]))
@@ -166,22 +148,145 @@ def periodicTasks():
         helper.internalLogger.debug("EVAL: now       {0} \t| {1}".format(now,datetime.fromtimestamp(now)))
         helper.internalLogger.debug("EVAL: nextTime {0} \t\t| {1}".format(item["nextTime"],datetime.fromtimestamp(item["nextTime"])))
         helper.internalLogger.debug("EVAL: interval  {0}".format(item["interval"]))
-        item["nextTime"]=item["nextTime"]+item["interval"]        
-        item["nbrOfTimes"] = item["nbrOfTimes"] + 1
-        if len(item["subscribers"])>0:
-          item["nbrOfTimesWithSubscribers"] = item["nbrOfTimesWithSubscribers"] + 1
-          result=runAction(GLB_configuration["actions"][item["action"]],"AUTO")
-          for i in item["subscribers"]:
-            if result is None:
-              bot.send_message(i,'Error: Exception executing {0}'.format(key))
-            else:
-              sendActionResult(i,GLB_configuration["actions"][item["action"]],result) 
+        item["nextTime"]=item["nextTime"]+item["interval"]    
+        updateNbrOfTimesCounters(item)
+        runActionAndSendMessageToSubscribers(item["subscribers"],item["action"])
     #helper.internalLogger.critical('ongoing {0}'.format(ongoing))
     UNLOCK(ongoing)
     time.sleep(1)
 
 
-  
+'''----------------------------------------------------------'''
+def updateNbrOfTimesCounters(item):
+  if not "nbrOfTimes" in item:
+          item["nbrOfTimes"]=0
+          item["nbrOfTimesWithSubscribers"]=0
+  item["nbrOfTimes"] = item["nbrOfTimes"] + 1
+  if len(item["subscribers"])>0:
+          item["nbrOfTimesWithSubscribers"] = item["nbrOfTimesWithSubscribers"] + 1
+
+'''----------------------------------------------------------'''
+'''----------------       event task      -------------------'''
+'''----------------------------------------------------------'''
+
+def eventTask(event):
+  global bot
+  helper.internalLogger.debug("New event to process: {0}".format(event))
+
+  #Purge stupid events TODO
+  ongoing=LOCK()
+  if "events" in ongoing:
+    for item in ongoing["events"]:
+      if ( event["name"] == item["name"] ):
+        helper.internalLogger.debug("Known event, let's check subscribers... ")
+        updateNbrOfTimesCounters(item)
+
+        #Sending event indication
+        sendTextMessageToSubscribers(item["subscribers"],"EVENT" + event["name"])
+
+        #Executing event, let's check if come with explicit items
+        if "text" in event:
+            sendTextMessageToSubscribers(item["subscribers"],event["text"])
+        if "img" in event:
+            sendImageMessageToSubscribers(item["subscribers"],event["img"])
+        if "video" in event:
+            sendVideoMessageToSubscribers(item["subscribers"],event["video"])
+        if "filetext" in event:
+            sendTextFileMessageToSubscribers(item["subscribers"],event["filetext"])
+
+        #TODO, explicit image, filetext or video
+
+        #Later, let's check if come with dynamic action associated
+        if "action" in event:
+            runActionAndSendMessageToSubscribers(item["subscribers"],event["action"])
+
+        #Later, let's check if come with predefined action associated
+        if "action" in item:
+            runActionAndSendMessageToSubscribers(item["subscribers"],item["action"])
+
+
+
+  #helper.internalLogger.critical('ongoing {0}'.format(ongoing))
+  UNLOCK(ongoing)
+
+'''----------------------------------------------------------'''
+def sendTextMessageToSubscribers(subscriberList, text):
+  for i in subscriberList:
+    bot.send_message(i,text)
+
+'''----------------------------------------------------------'''
+def sendImageMessageToSubscribers(subscriberList, path):
+  for i in subscriberList:
+    sendImageToSubscriber(i,path)
+
+'''----------------------------------------------------------'''
+def sendVideoMessageToSubscribers(subscriberList, path):
+  for i in subscriberList:
+    sendVideoToSubscriber(i,path)
+
+'''----------------------------------------------------------'''
+def sendTextFileMessageToSubscribers(subscriberList, path):
+  for i in subscriberList:
+    sendTextFileToSubscriber(i,path)
+
+'''----------------------------------------------------------'''
+def sendImageToSubscriber(chatid, path):
+  rt=True
+  if os.path.isfile(path):
+    helper.internalLogger.debug("File: {0}".format(path))
+    f = open(path, 'rb')
+    bot.send_photo(chatid, f)
+    f.close()
+  else: 
+    bot.send_message(chatid,"No image available, sorry")
+  return rt
+
+'''----------------------------------------------------------'''
+def sendVideoToSubscriber(chatid, path):
+  rt=True
+  if os.path.isfile(path):
+    helper.internalLogger.debug("File: {0}".format(path))
+    f = open(path, 'rb')
+    bot.send_video(chatid, f)
+    f.close()
+  else: 
+    bot.send_message(chatid,"No video available, sorry")
+  return rt
+
+'''----------------------------------------------------------'''
+def sendTextFileToSubscriber(chatid, path):
+  rt=True
+  if os.path.isfile(path):
+    helper.internalLogger.debug("File: {0}".format(path))
+    f = open(path, 'rb')
+    t = f.read()
+    bot.send_message(chatid, f)
+    f.close()
+  else: 
+    bot.send_message(chatid,"No text file available, sorry")
+  return rt
+
+
+
+
+'''----------------------------------------------------------'''
+def runActionAndSendMessageToSubscribers(subscriberList, actionName):
+  try: 
+    actionDescriptor=GLB_configuration["actions"][actionName]
+  except Exception as e:
+    helper.internalLogger.error('Error: not configured action. Cannot be sent to subscribers {0}'.format(actionName))
+    e = sys.exc_info()[0]
+    helper.internalLogger.critical('Error: not configured action. Cannot be sent to subscribers {0}'.format(actionName))
+    helper.einternalLogger.exception(e)
+    return 
+
+  if len(subscriberList)>0:
+    result=runAction(actionDescriptor,"AUTO")
+    for i in subscriberList:
+      if result is None:
+        bot.send_message(i,'Error: Exception executing {0}'.format(key))
+      else:
+        sendActionResult(i,actionDescriptor,result) 
 
 
 '''----------------------------------------------------------'''
@@ -220,32 +325,14 @@ def sendActionResult(chatid,action,result):
     try:
       feedback=False
       if "video" in action: 
-        if os.path.isfile(action["video"]):
-          f = open(action["video"], 'rb')
-          bot.send_video(chatid,f)    
-          f.close()  
-          feedback=True
-        else: 
-          bot.send_message(chatid,"No video available, sorry")
+        helper.internalLogger.debug("Action with video")
+        feedback=sendVideoToSubscriber(chatid,action["video"])
       if "image" in action:
         helper.internalLogger.debug("Action with image")
-        if os.path.isfile(action["image"]):
-          helper.internalLogger.debug("File: {0}".format(action["image"]))
-          f = open(action["image"], 'rb')
-          bot.send_photo(chatid, f)
-          f.close()
-          feedback=True
-        else: 
-          bot.send_message(chatid,"No image available, sorry")
+        feedback=sendImageToSubscriber(chatid,action["image"])
       if "text" in action:
-        if os.path.isfile(action["text"]):
-          f = open(action["text"], 'r')
-          t = f.read()
-          bot.send_message(chatid,t)
-          f.close()        
-          feedback=True
-        else:
-          bot.send_message(chatid,"No text available, sorry")
+        helper.internalLogger.debug("Action with text file")
+        feedback=sendTextFileToSubscriber(chatid,action["text"])
       if len(result)>0:
         bot.send_message(chatid,result)
         helper.internalLogger.debug("Action: {0} executed, send output".format(action,result))
@@ -315,24 +402,36 @@ def UNLOCK(data):
 
 
 '''----------------------------------------------------------'''
-def delSubscriber(id,actionName):
-  if actionName==None:
+def delSubscriber(id,tableName,item2subscribe=None):
+  if item2subscribe==None:
      aux="ALL"
   else:
-     aux=actionName
-  bot.send_message(id,'Unsubscribing you to {0} action...'.format(aux))
-  
+     aux=item2subscribe
+
+
   ongoing=LOCK()
 
-  for i in ongoing["periodic"]:
-    if actionName==None or actionName==i["action"]:
+  if not tableName in ongoing:
+    helper.internalLogger.error("Error. No {0} in configuration".format(tableName))
+    bot.send_message(id,"Error. No {0} in configuration".format(tableName))
+    UNLOCK(ongoing)
+    return
+
+  bot.send_message(id,'Unsubscribing you to {0} as {1} task...'.format(aux,tableName))
+  
+  for i in ongoing[tableName]:
+    if "name" in i:
+      matchingField=i["name"]
+    else :
+      matchingField=i["action"]
+    if item2subscribe==None or item2subscribe==matchingField:
       if not "subscribers" in i:
         i["subscribers"]=[]
       if id in i["subscribers"]:
-        bot.send_message(id,'Your are now unsubscribed to {0} action.'.format(i["action"]))
+        bot.send_message(id,'Your are now unsubscribed to {0} as {1} task.'.format(matchingField,tableName))
         i["subscribers"].remove(id)
       else:
-        bot.send_message(id,'Your are not subscribed to {0} action.'.format(i["action"]))
+        bot.send_message(id,'Your are not subscribed to {0} as {1} task.'.format(matchingField,tableName))
 
 
   #bk subscribers nv
@@ -346,25 +445,38 @@ def delSubscriber(id,actionName):
   UNLOCK(ongoing)
 
 
-  
+ 
 '''----------------------------------------------------------'''
-def addSubscriber(id,actionName):
-  if actionName==None:
+def addSubscriber(id,tableName,item2subscribe=None):
+  if item2subscribe==None:
      aux="ALL"
   else:
-     aux=actionName
-  bot.send_message(id,'Suscribing you to {0} action...'.format(aux))
-  
+     aux=item2subscribe
+
+
   ongoing=LOCK()
 
-  for i in ongoing["periodic"]:
-    if actionName==None or actionName==i["action"]:
+  if not tableName in ongoing:
+    helper.internalLogger.error("Error. No {0} in configuration".format(tableName))
+    bot.send_message(id,"Error. No {0} in configuration".format(tableName))
+    UNLOCK(ongoing)
+    return
+
+  bot.send_message(id,'Suscribing you to {0} as {1} task...'.format(aux,tableName))
+
+  for i in ongoing[tableName]:
+    if "name" in i:
+      matchingField=i["name"]
+    else:
+      matchingField=i["action"]
+
+    if item2subscribe==None or item2subscribe==matchingField:
       if not "subscribers" in i:
         i["subscribers"]=[]
       if id in i["subscribers"]:
-        bot.send_message(id,'Your are already subscribed to {0} action.'.format(i["action"]))
+        bot.send_message(id,'Your are already subscribed to {0} as {1} task.'.format(matchingField,tableName))
       else:
-        bot.send_message(id,'Your are now subscribed to {0} action.'.format(i["action"]))
+        bot.send_message(id,'Your are now subscribed to {0} as {1} task.'.format(matchingField,tableName))
         i["subscribers"].append(id)
 
   try:
@@ -388,8 +500,13 @@ def recoverOngoingTasks():
   UNLOCK({}) # cleanup
   ongoing=LOCK()
   
-  if "periodic" in GLB_configuration:
+  if ("periodic" in GLB_configuration):
     ongoing["periodic"]=GLB_configuration["periodic"]
+
+  if ("events" in GLB_configuration):
+    ongoing["events"]=GLB_configuration["events"]
+
+  if ("periodic" in GLB_configuration) or ("events" in GLB_configuration):
     # Recover form non-volatile information if any
     tmp={}
     try:
@@ -407,7 +524,21 @@ def recoverOngoingTasks():
         if itemNV["action"] == itemCfg["action"]:
           #Update subscribers
           itemCfg["subscribers"] = itemNV["subscribers"]
-          helper.internalLogger.debug("Recovered subscribers for action {0}:{1}.".format(itemCfg["action"],itemCfg["subscribers"]))
+          helper.internalLogger.debug("Recovered subscribers for periodic action {0}:{1}.".format(itemCfg["action"],itemCfg["subscribers"]))
+          break
+    except Exception as e:
+      helper.internalLogger.critical("Error crosschecking ongoingNV")
+      helper.einternalLogger.exception(e)
+
+    # Check that every action is still in new configuration
+    try:
+     for itemCfg in ongoing["events"]:
+      helper.internalLogger.debug("Recovering subscribers for event {0}....".format(itemCfg["name"]))
+      for itemNV in tmp["events"]:
+        if itemNV["name"] == itemCfg["name"]:
+          #Update subscribers
+          itemCfg["subscribers"] = itemNV["subscribers"]
+          helper.internalLogger.debug("Recovered subscribers for event {0}:{1}.".format(itemCfg["name"],itemCfg["subscribers"]))
           break
     except Exception as e:
       helper.internalLogger.critical("Error crosschecking ongoingNV")
@@ -482,25 +613,39 @@ def main(configfile):
       if "start" in msg:
         start=True
         if (len(msgList) == 1):
-          bot.send_message(message.chat.id, "Adding you as a subscribers in all periodic actions")
-          for item in GLB_configuration["periodic"]:
-            helper.internalLogger.debug("Start subscription to action {0}".format(item["action"]))
-            addSubscriber(message.chat.id,item["action"])
+          bot.send_message(message.chat.id, "Adding you as a subscribers for all periodic actions")
+          addSubscriber(message.chat.id,"periodic")
           return
         else:
           msg=msgList[1]
+          if "listen" in msg:  #this is for events
+            if (len(msgList) == 2): 
+              bot.send_message(message.chat.id, "Adding you as a subscribers for all events")
+              addSubscriber(message.chat.id,"events")
+            else: 
+              addSubscriber(message.chat.id,"events",msgList[2])
+            return
+          else:
+            stop=True   #Check below how try to match specific action
 
 
       if "stop" in msg:
         if (len(msgList) == 1):
-          bot.send_message(message.chat.id, "Deleting you as a subscribers in all periodic actions")
-          for item in GLB_configuration["periodic"]:
-            helper.internalLogger.debug("Stop subscription to action {0}".format(item["action"]))
-            delSubscriber(message.chat.id,item["action"])
+          bot.send_message(message.chat.id, "Deleting you as a subscribers for all periodic actions")
+          delSubscriber(message.chat.id,"periodic")
           return
         else:
           msg=msgList[1]
-          stop=True
+          if "listen" in msg:  #this is for events
+            if (len(msgList) == 2): 
+              bot.send_message(message.chat.id, "Deleting you as a subscribers for all events")
+              delSubscriber(message.chat.id,"events")
+            else:
+              delSubscriber(message.chat.id,"events",msgList[2])
+            return
+          else:
+            stop=True   #Check below how try to match specific action
+
 
       if "help" in msg or "helphidden" in msg:
 
@@ -527,11 +672,11 @@ def main(configfile):
             if msg == key.lower():
               if start:
                 helper.internalLogger.debug("Start subscription to action {0}".format(key))
-                addSubscriber(message.chat.id,key)
+                addSubscriber(message.chat.id,"periodic",key)
                 return
               if stop:
                 helper.internalLogger.debug("Stop subscription to action {0}".format(key))
-                delSubscriber(message.chat.id,key)
+                delSubscriber(message.chat.id,"periodic",key)
                 return
               helper.internalLogger.debug("Command '{0}' executing...".format(key))
               result=runAction(item,message.text)  

@@ -1,10 +1,9 @@
-<h2>Request a new action¡</h2>
-<form action="{{ url_for('telegramBOT_home') }}" method = "POST">
+<h2>Raise a new async event to your BOT engine to distribute among subscribers</h2>
+<form event="{{ url_for('telegramBOT_home') }}" method = "POST">
     <table>
       <tr><td>Name (*)</td><td><input type=text name=name required></td></tr>
-      <tr><td>Interval (*)</td><td><input type=number name=interval required></td></tr>
-      <tr><td>Max number of pictures</td><td><input type=number name=maxNbrOfPictures></td></tr>
-      <tr><td>Max Record Time(s)</td><td><input type=number name=maxTime></td></tr> 
+      <tr><td>Predefine action</td><td><input type=number name=action></td></tr>
+      <tr><td>Text to send</td><td><input type=number name=text></td></tr> 
      </table>
      <input type=submit value="Request it">
 </form>
