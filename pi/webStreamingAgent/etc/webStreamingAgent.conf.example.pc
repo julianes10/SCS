@@ -1,0 +1,19 @@
+{
+  "log": { "logTraces":"/tmp/webStreamingAgent.log",
+           "logExceptions":"/tmp/webStreamingAgente.log"
+  },
+  "browserLauncher":"$HOME/prj/pipapi/SCS/pi/webStreamingAgent/browserLauncher.pc.sh",
+  "trackFile":"/tmp/webStreamingAgent.track",
+  "browserLauncherTimeout":15,
+  "loadTime":10,
+  "playButton": {
+        "x":907,
+        "y":657
+  },
+  "kpi": {
+        "cpu":    { "minValue": 0,  
+                    "cmd":"$HOME/prj/pipapi/SCS/pi/webStreamingAgent/browserCpuUsage.sh"},
+        "bwKbps": { "minValue": 200, 
+                    "cmd":"$HOME/prj/pipapi/SCS/pi/webStreamingAgent/netUsage.pc.sh"}
+  }
+}

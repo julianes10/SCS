@@ -1,0 +1,16 @@
+{
+  "log": { "logTraces":"/tmp/webStreamingAgent.log",
+           "logExceptions":"/tmp/webStreamingAgente.log"
+  },
+  "browserLauncher":"/opt/webStreamingAgent/browserLauncher.sh",
+  "trackFile":"/tmp/webStreamingAgent.track",
+  "loadTime":20,
+  "playButton": {
+        "x":222,
+        "y":222
+  },
+  "kpi": {
+        "cpu":33,
+        "bw":2
+  }
+}

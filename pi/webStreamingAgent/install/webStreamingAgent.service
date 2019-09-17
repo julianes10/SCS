@@ -1,0 +1,17 @@
+[Unit]
+Description=Web streaming agent
+After=multi-user.target
+Wants = network-online.target
+
+[Service]
+User = pi
+Group = pi
+Type=simple
+ExecStart=/opt/PROJECT_NAME/webStreamingAgent/webStreamingAgent.py --configfile /etc/webStreamingAgent.conf
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+
