@@ -9,6 +9,7 @@ echo "Executing $0 with arguments: $@"
 
 browser="chromium-browser"
 pkill -f $browser
+killall $browser
 
 
 #Note setup visudo first

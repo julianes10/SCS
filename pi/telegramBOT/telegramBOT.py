@@ -294,13 +294,15 @@ def runActionAndSendMessageToSubscribers(subscriberList, actionName):
 
 def runAction(action,originalMsg):
   rt=None
+  msgSplitted=originalMsg.split()
   try:
-
     cmd=action["cmd"]
     if "TELEGRAM_COMMAND" in action["cmd"]:
         helper.internalLogger.debug("Custom cmd with TELEGRAM_COMMAND {0}'".format(cmd)) 
-        msgSplitted=originalMsg.split()     
         cmd=action["cmd"].replace("TELEGRAM_COMMAND",' '.join(msgSplitted[1:]))
+
+    if "include-message-args" in action:
+        cmd=action["cmd"] + ' '+' '.join(msgSplitted[1:])
   
     global bot
     result=subprocess.check_output(['bash','-c',cmd])
@@ -333,7 +335,7 @@ def sendActionResult(chatid,action,result):
       if "text" in action:
         helper.internalLogger.debug("Action with text file")
         feedback=sendTextFileToSubscriber(chatid,action["text"])
-      if len(result)>0:
+      if len(result.lstrip())>0:
         bot.send_message(chatid,result)
         helper.internalLogger.debug("Action: {0} executed, send output".format(action,result))
         feedback=True

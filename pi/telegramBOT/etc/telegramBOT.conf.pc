@@ -6,8 +6,8 @@
   "host":"0.0.0.0",
   "ongoingDB":"/tmp/telegramBOT.ongoing",
   "ongoingDBNV":"/tmp/telegramBOT.ongoingNV",
-  "hash":"asdf,
-  "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run","mem"],
+  "hash":"",
+  "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run","mem","status","paramtest"],
   "pollingTimeout" : 10,
   "actions" : { 
     "foto"  : { "cmd" : "fswebcam -r  400x300 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
@@ -18,14 +18,21 @@
     "uptime"  : { "cmd" : "uptime"},
     "test"  : { "cmd" : "echo hola-esto-es-un-test", "hidden":false},
     "mem"  : { "cmd" : "free -h"},
-    "run"  : { "cmd" : "TELEGRAM_COMMAND","hidden":true}
+    "paramtest"  : { "cmd" : "echo","include-message-args":true},
+    "run"  : { "cmd" : "TELEGRAM_COMMAND","hidden":true},
+    "status": { "cmd" : "wkhtmltoimage localhost:5061 /tmp/status.jpg >/dev/null", "image":"/tmp/status.jpg","hidden":true}
   },
   "periodic" : [
     { "action" : "test","interval":7200, "start" : "01:00:00"},
     { "action" : "mem","interval":40},
     { "action" : "fotoHD","interval":60, "start" : "01:26:00"},
-    { "action" : "foto","interval":3600, "start" : "05:00:00"}
+    { "action" : "foto","interval":3600, "start" : "15:51:00"}
+  ],
+  "events" : [
+    { "name": "pepito1","action" : "test"},
+    { "name": "pepito2","action" : "mem"},
+    { "name": "pepito3","action" : "fotoHD"},
+    { "name": "pepito4","action" : "foto"}
   ]
 }
-
 
