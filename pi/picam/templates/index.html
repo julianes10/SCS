@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+    <head>
+      <title>PICAM Web Interface</title>
+      <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+      <script src="{{url_for('static', filename='tabsmgt.js')}}"></script>
+    </head>
+<body onload="openTab(event, 'stream')">
+<div class="container">
+  <!-- Tab links -->
+  <div class="tab">
+    <button class="tablinks" onclick="openTab(event, 'stream')">Live</button>
+  </div>
+
+  <!-- Tab content -->
+  <div id="stream" class="tabcontent">
+    <img src="../mjpgstreamer/?action=stream"/>
+  </div>
+
+</div>
+</body>
+</html>
+

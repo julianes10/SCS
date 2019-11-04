@@ -1,0 +1,15 @@
+[Unit]
+Description=picam service
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/opt/PROJECT_NAME/picam/picam.py --configfile /etc/picam.conf
+WorkingDirectory=/opt/PROJECT_NAME/picam/
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+
