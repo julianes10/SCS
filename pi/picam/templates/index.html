@@ -4,18 +4,30 @@
       <title>PICAM Web Interface</title>
       <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
       <script src="{{url_for('static', filename='tabsmgt.js')}}"></script>
+      <script src="{{url_for('static', filename='servo.js')}}"></script>
     </head>
-<body onload="openTab(event, 'stream')">
+{% if display.tab %}
+<body onload='openTab(event, "{{ display.tab }}")'>
+{% else %}
+<body onload="openTab(event, 'Live')">
+{% endif %}
 <div class="container">
   <!-- Tab links -->
   <div class="tab">
-    <button class="tablinks" onclick="openTab(event, 'stream')">Live</button>
+    <button class="tablinks" onclick="openTab(event, 'Live')" >Live</button>
+    <button class="tablinks" onclick="openTab(event, 'PanTilt')">Pan Tilt Control</button>
   </div>
 
-  <!-- Tab content -->
-  <div id="stream" class="tabcontent">
-    <img src="../mjpgstreamer/?action=stream"/>
+<!-- Tab content -->
+  <div id="Live" class="tabcontent">
+    {% include "live.html" %}
   </div>
+
+  <div id="PanTilt" class="tabcontent">
+    {% include "pantilt.html" %}
+  </div>
+
+
 
 </div>
 </body>

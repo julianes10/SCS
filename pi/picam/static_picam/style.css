@@ -48,3 +48,72 @@ html, body {
   border: 1px solid #ccc;
   border-top: none;
 }
+
+
+.cellCenter{
+  /* border: 0px solid black;
+  width: 300px;*/
+  text-align: center;
+}
+
+#mediumsizeimg {
+  width: 200px;
+  height: auto;
+}
+
+
+#buttonX5 {
+  background-color: #008CBA; /* blue */
+  border: 2px solid #008CBA;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  border-radius: 15%;
+  -webkit-transition-duration: 0.2s; /* Safari */
+  transition-duration: 0.2s;
+}
+
+#buttonX5:hover {
+  background-color: white; 
+  color: black;
+}
+
+#buttonX1 {
+  background-color: #4CAF50; /* green */
+  border: 2px solid #4CAF50;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  border-radius: 15%;
+  -webkit-transition-duration: 0.2s; /* Safari */
+  transition-duration: 0.2s;
+}
+
+#buttonX1:hover {
+  background-color: white; 
+  color: black;
+}
+#buttonX10 {
+  background-color: #f44336; /* red */
+  border: 2px solid #f44336;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  border-radius: 15%;
+  -webkit-transition-duration: 0.2s; /* Safari */
+  transition-duration: 0.2s;
+}
+
+#buttonX10:hover {
+  background-color: white; 
+  color: black;
+

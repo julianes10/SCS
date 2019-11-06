@@ -1,19 +1,34 @@
-<table>
+<table class="cellCenter">
    <tr>
     <td></td>
-    <td align="center"><button onclick="ajax_delta_position('tilt',-1)">UP</button></td>
+    <td>UP<br>
+        <button id="buttonX10" onclick="ajax_delta_position('tilt',-10)">x10</button>
+        <button id="buttonX5" onclick="ajax_delta_position('tilt',-5)">x5</button>
+        <button id="buttonX1" onclick="ajax_delta_position('tilt',-1)">x1</button>
+    </td>
     <td></td>
    </tr><tr>
-    <td align="center"><button onclick="ajax_delta_position('pan',1)">LEFT</button></td></td>
-    <td></td>
-    <td align="center"><img class="mediumsizeimg" src="../mjpgstreamer/?action=stream"/></td>
-    <td align="center"><button onclick="ajax_delta_position('pan',-1)">RIGHT</button></td></td>
-    <td></td>
+    <td>LEFT<br>
+        <button id="buttonX10" onclick="ajax_delta_position('pan',10)">x10</button><br>
+        <button id="buttonX5" onclick="ajax_delta_position('pan',5)">x5</button><br>
+        <button id="buttonX1" onclick="ajax_delta_position('pan',1)">x1</button>
+    </td>
+    <td><img id="mediumsizeimg" src="../mjpgstreamer/?action=stream"/></td>
+    <td>RIGHT<br>
+        <button id="buttonX10" onclick="ajax_delta_position('pan',-10)">x10</button><br>
+        <button id="buttonX5" onclick="ajax_delta_position('pan',-5)">x5</button><br>
+        <button id="buttonX1" onclick="ajax_delta_position('pan',-1)">x1</button>
+    </td>
    </tr><tr>
     <td></td>
-    <td align="center"><button onclick="ajax_delta_position('tilt',1)">DOWN</button></td></td>
+    <td>
+        <button id="buttonX10" onclick="ajax_delta_position('tilt',10)">x10</button>
+        <button id="buttonX5" onclick="ajax_delta_position('tilt',5)">x5</button>
+        <button id="buttonX1" onclick="ajax_delta_position('tilt',1)">x1</button><br>
+        DOWN
+    </td>
     <td></td>
-   </tr><tr>
+   </tr>
 </table>
 <br>
 <table>
