@@ -65,6 +65,7 @@ class ServoTrackDirection:
     rt['current'] = self.current
     return rt
 
+
 '''----------------------------------------------------------'''
 class ServoTrack:
   def __init__(self,cfg):
@@ -162,6 +163,11 @@ class ServoHandler:
     return rt
 
 
+  def end(self):
+    if amIaPi():
+      pwm.exit_PCA9685()
+
+
 
 
 '''----------------------------------------------------------'''
@@ -178,7 +184,7 @@ def format_videoURL(value):
 '''----------------------------------------------------------'''
 '''----------------      API REST         -------------------'''
 '''----------------------------------------------------------'''
-api = Flask("api",template_folder="templates",static_folder='static')
+api = Flask("api",template_folder="templates",static_folder='static_picam')
 api.jinja_env.filters['datetime'] = format_datetime
 api.jinja_env.filters['videoURL'] = format_videoURL
 
@@ -192,44 +198,52 @@ def getStatus():
     rt['servo']=GLB_servo.toDict()
     return rt
 '''----------------------------------------------------------'''
-@api.route('/',methods=["GET", "POST"])
+def render_home_tab(tab):
+  display={}
+  display["tab"]=tab
+  streamer={}
+  streamer["port"]=GLB_configuration["mjpg-streamerServicePort"]
+  streamer["ip"]  =GLB_configuration["mjpg-streamerServiceIP"]
+  st=getStatus()
+  return render_template('index.html', title="Live picam",status=st,streamer=streamer,display=display)
+'''----------------------------------------------------------'''
+@api.route('/',methods=["GET"])
 def home():
-    if request.method == 'POST':
-      helper.internalLogger.debug("Processing new request from a form...{0}".format(request.form))
-      form2 = request.form.to_dict()
-      helper.internalLogger.debug("Processing new request from a form2...{0}".format(form2))   
-      requestNewOngoing(form2)
+    return render_home_tab('Live')
 
-    streamer={}
-    streamer["port"]=GLB_configuration["mjpg-streamerServicePort"]
-    streamer["ip"]  =GLB_configuration["mjpg-streamerServiceIP"]
-    st=getStatus()
-    rt=render_template('index.html', title="Live picam",status=st,streamer=streamer)
-    return rt
+'''----------------------------------------------------------'''
+@api.route('/position',methods=["POST"])
+@api.route('/picam/position',methods=["POST"])
+def picam_gui_position():
+   helper.internalLogger.debug("GUI setup position")
+   #TODO
+   try:
+     helper.internalLogger.debug("Processing new request from a form...{0}".format(request.form))
+     form2 = request.form.to_dict()
+     helper.internalLogger.debug("Processing new request from a form2...{0}".format(form2))
+     data=json.loads(form2['json'])
+     helper.internalLogger.debug("Processing new request from a j...{0}".format(data))   
+     requestNewPosition(data)
+   except Exception as e:
+     helper.internalLogger.critical("Error reading value date: {0}.".format(request.form))
+     helper.einternalLogger.exception(e)
+
+   return render_home_tab('PanTilt')
+
+
 
 '''----------------------------------------------------------'''
 @api.route('/api/v1.0/picam/position',methods=["POST"])
 def post_picam_position():
   rt = {}
   try:
-      global GLB_servo
+
       helper.internalLogger.debug("new positon required")
       helper.internalLogger.debug("Processing new request from a form...{0}".format(request.json))
       data = request.get_json()
-
-
-      rt['result']='OK'       
-      if "pan" in data:
-        if "delta" in data["pan"]:
-          GLB_servo.setDeltaPan(data["pan"]["delta"])
-        if "abs" in data["pan"]:
-          GLB_servo.setPan(data["pan"]["abs"])
-
-      if "tilt" in data:
-        if "delta" in data["tilt"]:
-          GLB_servo.setDeltaTilt(data["tilt"]["delta"])
-        if "abs" in data["tilt"]:
-          GLB_servo.setTilt(data["tilt"]["abs"])
+      rt['result']='OK'     
+  
+      rt['data']=requestNewPosition(data)
  
       rtjson=json.dumps(rt)
 
@@ -241,6 +255,24 @@ def post_picam_position():
     helper.internalLogger.debug("status failed")
 
   return rtjson
+
+
+
+def requestNewPosition(data):
+      global GLB_servo
+      if "pan" in data:
+        if "delta" in data["pan"]:
+          GLB_servo.setDeltaPan(data["pan"]["delta"])
+        if "abs" in data["pan"]:
+          GLB_servo.setPan(data["pan"]["abs"])
+
+      if "tilt" in data:
+        if "delta" in data["tilt"]:
+          GLB_servo.setDeltaTilt(data["tilt"]["delta"])
+        if "abs" in data["tilt"]:
+          GLB_servo.setTilt(data["tilt"]["abs"])
+
+      return GLB_servo.toDict()
 
 '''----------------------------------------------------------'''
 @api.route('/api/v1.0/picam/status', methods=['GET'])
@@ -314,6 +346,8 @@ def main(configfile):
   except Exception as e:
     helper.internalLogger.critical("Error processing GLB_configuration json {0} file. Exiting".format(configfile))
     helper.einternalLogger.exception(e)
+    if not GLB_servo is None:
+        GLB_servo.end()
     loggingEnd()
     return  
 
@@ -329,7 +363,8 @@ def main(configfile):
     helper.internalLogger.critical('Error: Exception unprocessed properly. Exiting')
     helper.einternalLogger.exception(e)  
     print('picam-General exeception captured. See log:{0}',format(cfg_log_exceptions))        
-    mountBindMediaPath(False)
+    if not GLB_servo is None:
+        GLB_servo.end()
     loggingEnd()
 
 '''----------------------------------------------------------'''

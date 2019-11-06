@@ -1,0 +1,28 @@
+<table>
+   <tr>
+    <td></td>
+    <td align="center"><button onclick="ajax_delta_position('tilt',-1)">UP</button></td>
+    <td></td>
+   </tr><tr>
+    <td align="center"><button onclick="ajax_delta_position('pan',1)">LEFT</button></td></td>
+    <td></td>
+    <td align="center"><img class="mediumsizeimg" src="../mjpgstreamer/?action=stream"/></td>
+    <td align="center"><button onclick="ajax_delta_position('pan',-1)">RIGHT</button></td></td>
+    <td></td>
+   </tr><tr>
+    <td></td>
+    <td align="center"><button onclick="ajax_delta_position('tilt',1)">DOWN</button></td></td>
+    <td></td>
+   </tr><tr>
+</table>
+<br>
+<table>
+   <tr><td>Absolute positions</td></tr>
+   <tr><td><button onclick="ajax_set_full_position(0,0)">EXTREME POSITION 1</button></td></tr>
+   <tr><td><button onclick="ajax_set_full_position(180,90)">EXTREME POSITION 2</button></td></tr>
+   <tr><td><button onclick="ajax_set_full_position(90,45)">CENTER</button></td></tr>
+</table>
+<div id="position">
+</div>
+
+
