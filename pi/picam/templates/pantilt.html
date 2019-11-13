@@ -13,7 +13,17 @@
         <button id="buttonX5" onclick="ajax_delta_position('pan',5)">x5</button><br>
         <button id="buttonX1" onclick="ajax_delta_position('pan',1)">x1</button>
     </td>
-    <td><img id="mediumsizeimg" src="../mjpgstreamer/?action=stream"/></td>
+    <td>
+{% if st.status.live.enable %}
+  {% if st.status.live.active %}
+    <img id="mediumsizeimg" src="../mjpgstreamer/?action=stream"/>
+  {% else %}
+    Streaming is not started. Go to live menu to activate
+  {% endif %}
+{% else %}
+  Streaming is not enabled. Review picam configuration
+{% endif %}
+    </td>
     <td>RIGHT<br>
         <button id="buttonX10" onclick="ajax_delta_position('pan',-10)">x10</button><br>
         <button id="buttonX5" onclick="ajax_delta_position('pan',-5)">x5</button><br>

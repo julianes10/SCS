@@ -4,7 +4,7 @@
       <title>PICAM Web Interface</title>
       <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
       <script src="{{url_for('static', filename='tabsmgt.js')}}"></script>
-      <script src="{{url_for('static', filename='servo.js')}}"></script>
+      <script src="{{url_for('static', filename='picam.js')}}"></script>
     </head>
 {% if display.tab %}
 <body onload='openTab(event, "{{ display.tab }}")'>
@@ -16,6 +16,7 @@
   <div class="tab">
     <button class="tablinks" onclick="openTab(event, 'Live')" >Live</button>
     <button class="tablinks" onclick="openTab(event, 'PanTilt')">Pan Tilt Control</button>
+    <button class="tablinks" onclick="openTab(event, 'Status')">Status</button>
   </div>
 
 <!-- Tab content -->
@@ -27,7 +28,9 @@
     {% include "pantilt.html" %}
   </div>
 
-
+  <div id="Status" class="tabcontent">
+    {% include "status.html" %}
+  </div>
 
 </div>
 </body>

@@ -33,6 +33,34 @@ def getVersion():
 from flask import Flask, jsonify,abort,make_response,request, url_for
 from helper import *
 
+
+
+'''----------------------------------------------------------'''
+def getLiveStatus():
+  rt={}
+
+  rt["enable"]=False
+  rt["active"]=False
+
+  if not "live" in GLB_configuration: 
+    return rt
+  if not "enable" in GLB_configuration["live"]:
+    return rt
+
+  if not GLB_configuration["live"]["enable"]:
+    return rt
+
+  rt["enable"]=True
+
+  helper.internalLogger.debug("Get live status...")
+  try:
+    result=subprocess.check_output(GLB_configuration["live"]["isActiveCmd"], shell=True)
+    rt["active"]=True
+  except subprocess.CalledProcessError as execution:
+    helper.internalLogger.debug("Return code: {0}. Output {1}".format(execution.returncode, execution.output))
+  helper.internalLogger.debug("Live is {0}".format(rt))
+  return rt
+
 '''----------------------------------------------------------'''
 '''----------------------------------------------------------'''
 
@@ -100,14 +128,10 @@ class ServoTrack:
 '''----------------------------------------------------------'''
 class ServoHandler:
   def __init__(self,cfg):
+    self.pwm=None
     if amIaPi():
-      import RPi.GPIO as GPIO
-      from PCA9685 import PCA9685
-      self.pwm = PCA9685()
-      self.pwm.setPWMFreq(50)
-      #pwm.setServoPulse(1,500) 
-      self.pwm.setRotationAngle(1, 0)
-      self.pwm.setRotationAngle(0, 0)
+      self.setPan(0)
+      self.setTilt(0)
     else:
       helper.internalLogger.debug("Not running in pi. Not init servo")
     self.autoTrack = ServoTrack(cfg)
@@ -118,6 +142,25 @@ class ServoHandler:
       if "initTilt" in cfg:
         self.setTilt(cfg["initTilt"])
 
+  def end(self):
+    stopDriver()
+
+
+  def restartDriver(self):
+    if amIaPi():
+      import RPi.GPIO as GPIO
+      from PCA9685 import PCA9685
+      self.pwm = PCA9685()
+      self.pwm.setPWMFreq(50)
+    else:
+      helper.internalLogger.debug("Not running in pi. Not init servo")
+
+  def stopDriver(self):
+    if amIaPi():
+      helper.internalLogger.debug("Servo end...")   
+      self.pwm.exit_PCA9685()
+    self.pwm=None
+  
   def setDeltaPan(self,delta):
     helper.internalLogger.debug("setDeltaPan...{0}".format(delta))   
     aux=int(self.pan+int(delta))
@@ -141,14 +184,20 @@ class ServoHandler:
     helper.internalLogger.debug("setPan...{0}".format(value))   
     self.pan = int(value)
     if amIaPi():
+      if self.pwm is None:
+        self.restartDriver()
       self.pwm.setRotationAngle(1,int(value))
+      self.stopDriver()
+
 
   def setTilt(self,value):
     helper.internalLogger.debug("setTilt...{0}".format(value))   
     self.tilt = int(value)
     if amIaPi():
+      if self.pwm is None:
+        self.restartDriver()
       self.pwm.setRotationAngle(0,int(value))
-    
+      #self.stopDriver()
 
   def reset(self):
     self.pan = 0
@@ -163,9 +212,7 @@ class ServoHandler:
     return rt
 
 
-  def end(self):
-    if amIaPi():
-      pwm.exit_PCA9685()
+
 
 
 
@@ -190,47 +237,17 @@ api.jinja_env.filters['videoURL'] = format_videoURL
 
 
 
-
-'''----------------------------------------------------------'''
-def getStatus():
-    rt={}
-    rt['live']=False #TODO if mj streamer running
-    rt['servo']=GLB_servo.toDict()
-    return rt
-'''----------------------------------------------------------'''
-def render_home_tab(tab):
-  display={}
-  display["tab"]=tab
-  streamer={}
-  streamer["port"]=GLB_configuration["mjpg-streamerServicePort"]
-  streamer["ip"]  =GLB_configuration["mjpg-streamerServiceIP"]
-  st=getStatus()
-  return render_template('index.html', title="Live picam",status=st,streamer=streamer,display=display)
 '''----------------------------------------------------------'''
 @api.route('/',methods=["GET"])
 def home():
     return render_home_tab('Live')
 
 '''----------------------------------------------------------'''
-@api.route('/position',methods=["POST"])
-@api.route('/picam/position',methods=["POST"])
-def picam_gui_position():
-   helper.internalLogger.debug("GUI setup position")
-   #TODO
-   try:
-     helper.internalLogger.debug("Processing new request from a form...{0}".format(request.form))
-     form2 = request.form.to_dict()
-     helper.internalLogger.debug("Processing new request from a form2...{0}".format(form2))
-     data=json.loads(form2['json'])
-     helper.internalLogger.debug("Processing new request from a j...{0}".format(data))   
-     requestNewPosition(data)
-   except Exception as e:
-     helper.internalLogger.critical("Error reading value date: {0}.".format(request.form))
-     helper.einternalLogger.exception(e)
-
-   return render_home_tab('PanTilt')
-
-
+def render_home_tab(tab):
+  display={}
+  display["tab"]=tab
+  st=getStatus()
+  return render_template('index.html', title="Live picam",st=st,display=display)
 
 '''----------------------------------------------------------'''
 @api.route('/api/v1.0/picam/position',methods=["POST"])
@@ -239,7 +256,7 @@ def post_picam_position():
   try:
 
       helper.internalLogger.debug("new positon required")
-      helper.internalLogger.debug("Processing new request from a form...{0}".format(request.json))
+      helper.internalLogger.debug("Processing new request:...{0}".format(request.json))
       data = request.get_json()
       rt['result']='OK'     
   
@@ -249,15 +266,13 @@ def post_picam_position():
 
   except Exception as e:
     e = sys.exc_info()[0]
-    helper.internalLogger.error('Error: gathering status')
+    helper.internalLogger.error('Error: position json')
     helper.einternalLogger.exception(e)  
     rtjson=jsonify({'result': 'KO'})
     helper.internalLogger.debug("status failed")
-
   return rtjson
 
-
-
+'''----------------------------------------------------------'''
 def requestNewPosition(data):
       global GLB_servo
       if "pan" in data:
@@ -275,9 +290,55 @@ def requestNewPosition(data):
       return GLB_servo.toDict()
 
 '''----------------------------------------------------------'''
+@api.route('/api/v1.0/picam/live',methods=["POST"])
+def post_picam_live():
+  rt = {}
+  try:
+
+      helper.internalLogger.debug("Live setting request")
+      helper.internalLogger.debug("Processing new request:{0}...".format(request.json))
+      rt['result']='OK'     
+      data = request.get_json()
+      rt['data']=requestLive(data)
+
+      rtjson=json.dumps(rt)
+
+  except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.error('Error: in live json')
+    helper.einternalLogger.exception(e)  
+    rtjson=jsonify({'result': 'KO'})
+    helper.internalLogger.debug("status failed")
+  return rtjson
+
+
+'''----------------------------------------------------------'''
+def requestLive(data):     
+      rt={}
+      rt["live"]=False
+      helper.internalLogger.debug("requestLive...")
+      if "live" in data:
+        helper.internalLogger.debug("requestLive live in data...")
+        if data["live"]:
+          helper.internalLogger.debug("Starting live video streamer...")
+          result=subprocess.check_output(['bash','-c',GLB_configuration["live"]["startCmd"]])
+          rt["live"]=True
+        else:
+          helper.internalLogger.debug("Stopping live video streamer...")
+          result=subprocess.check_output(['bash','-c',GLB_configuration["live"]["stopCmd"]])
+          rt["live"]=False
+
+      return rt
+
+'''----------------------------------------------------------'''
 @api.route('/api/v1.0/picam/status', methods=['GET'])
 def get_picam_status():
+  helper.internalLogger.debug("status required")
+  rtjson=json.dumps(getStatus())
+  return rtjson
 
+
+def getStatus():
   global GLB_servo
 
   helper.internalLogger.debug("status required")
@@ -285,21 +346,20 @@ def get_picam_status():
   rt['vsw']={}
   rt['vsw']['picam']=getVersion()
   try:
-      #TODO
       rt['result']='OK'       
-      rt['status']=getStatus()
+      rt['status']={}
+      rt['status']['live']=getLiveStatus()
+      rt['status']['servo']=GLB_servo.toDict()
       helper.internalLogger.debug("status {0}".format(rt))
-
-      rtjson=json.dumps(rt)
 
   except Exception as e:
     e = sys.exc_info()[0]
     helper.internalLogger.error('Error: gathering status')
     helper.einternalLogger.exception(e)  
-    rtjson=jsonify({'result': 'KO'})
+    rt['result']='KO'
     helper.internalLogger.debug("status failed")
 
-  return rtjson
+  return rt
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
@@ -332,6 +392,8 @@ def main(configfile):
   helper.internalLogger.critical('picam-start -------------------------------')  
   helper.einternalLogger.critical('picam-start -------------------------------')
 
+  signal.signal(signal.SIGINT, signal_handler)
+
   try:
     apiRestTask=threading.Thread(target=apirest_task,name="restapi")
     apiRestTask.daemon = True
@@ -356,7 +418,9 @@ def main(configfile):
      while True:
        #helper.internalLogger.critical("Polling, nothing to poll yet")
        time.sleep(1)
-
+  
+     if not GLB_servo is None:
+       GLB_servo.end()
 
   except Exception as e:
     e = sys.exc_info()[0]
@@ -366,6 +430,17 @@ def main(configfile):
     if not GLB_servo is None:
         GLB_servo.end()
     loggingEnd()
+
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+def signal_handler(sig, frame):
+    print('SIGNAL CAPTURED')        
+    if not GLB_servo is None:
+        GLB_servo.end()
+    loggingEnd()
+    sys.exit(0)
+
+
 
 '''----------------------------------------------------------'''
 '''----------------     apirest_task      -------------------'''
