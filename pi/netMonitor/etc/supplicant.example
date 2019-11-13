@@ -1,0 +1,10 @@
+network={
+    ssid="wifi_A"
+    psk="passwordOfA"
+    priority=1
+}
+network={
+   ssid="wifi_B"
+   psk="passwordOfB"
+   priority=2
+}

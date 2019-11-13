@@ -3,3 +3,7 @@ INTERVAL=40
 RETRYTIMES=5
 RETRYINTERVAL=30
 ONFAILURECOMMAND=logger "halo halo"
+#FAVORITESSID=/etc/wpa_supplicant/wpa_supplicant.conf
+FAVORITESSID=etc/supplicant.example
+IFACE=wlan0
+
