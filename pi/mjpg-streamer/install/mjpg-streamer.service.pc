@@ -1,0 +1,15 @@
+[Unit]
+Description = mjstreamer  launcher
+After = remote-fs.target network-online.target
+Wants = network-online.target
+
+[Service]
+User = jes
+Group = jes
+Type = simple
+ExecStart = /home/jes/prj/smartCam/SCS/pi/mjpg-streamer/mjpg-streamer.daemon.sh /etc/mjpg-streamer.conf
+Restart = always
+RestartSec = 5
+
+[Install]
+WantedBy = multi-user.target
