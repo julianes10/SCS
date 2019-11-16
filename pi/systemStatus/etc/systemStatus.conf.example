@@ -1,0 +1,16 @@
+{
+  "log": { "logTraces":"/tmp/systemStatus.log",
+           "logExceptions":"/tmp/systemStatuse.log"
+  },
+  "port":5050,
+  "host":"0.0.0.0",
+  "polling-interval":2,
+  "services":["smartCam", "picam", "timelapse", "mjpg-streamer", "telegramBOT", "netMonitor", "wvdial", "systemStatus"],
+  "plugin": {
+      "mem" :"free -h",
+      "cpu" :"top -o %CPU -n 1 -b  | head -15",
+      "disk":"df -H",
+      "network":"/home/jes/prj/smartCam/SCS/pi/systemStatus/networkingCmd.sh"
+  }
+}
+

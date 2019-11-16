@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+    <head>
+      <title>System Status Web Interface</title>
+      <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+      <script src="{{url_for('static', filename='tabsmgt.js')}}"></script>
+      <script src="{{url_for('static', filename='systemStatus.js')}}"></script>
+    </head>
+{% if display.tab %}
+<body onload='openTab(event, "{{ display.tab }}")'>
+{% else %}
+<body onload="openTab(event, 'Services')">
+{% endif %}
+<div class="container">
+  <!-- Tab links -->
+  <div class="tab">
+    <button class="tablinks" onclick="openTab(event, 'services')">Services</button>
+    <button class="tablinks" onclick="openTab(event, 'cpu')">CPU</button>
+    <button class="tablinks" onclick="openTab(event, 'mem')">Memory</button>
+    <button class="tablinks" onclick="openTab(event, 'disk')">Disk</button>
+    <button class="tablinks" onclick="openTab(event, 'network')">Network</button>
+  </div>
+
+<!-- Tab content -->
+  <div id="services" class="tabcontent">
+    {% include "services.html" %}
+  </div>
+
+  <div id="cpu" class="tabcontent">
+{% with element="cpu", dump=st.cpu %}
+    {% include "dump.html" %}
+{% endwith %}
+  </div>
+
+  <div id="mem" class="tabcontent">
+{% with element="mem", dump=st.mem %}
+    {% include "dump.html" %}
+{% endwith %}
+  </div>
+
+  <div id="disk" class="tabcontent">
+{% with element="disk", dump=st.disk %}
+    {% include "dump.html" %}
+{% endwith %}
+  </div>
+
+  <div id="network" class="tabcontent">
+{% with element="network",dump=st.network %}
+    {% include "dump.html" %}
+{% endwith %}
+  </div>
+
+</div>
+</body>
+</html>
+

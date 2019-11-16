@@ -1,0 +1,23 @@
+<div>
+  <button onclick="reload()">REFRESH</button>&nbsp;&nbsp;
+  <br>
+
+{% if st.services %}
+<table>
+   <tr><th>Service</th><th>Enable</th><th>Active</th><th>Failed</th><th>#Starts</th><th>StartTime</th></tr>
+   {% for key,value in st.services.items() %} 
+   <tr>
+    <td>{{key}}</td>
+    <td>{{value.enable}}</td>
+    <td>{{value.active}}</td>
+    <td>{{value.failed}}</td>
+    <td>{{value.restarts}}</td>
+    <td>{{value.startTime}}</td>
+   </tr>
+   {% endfor %}
+</table>
+{% else %}
+No services info is available
+{% endif %}
+
+</div>
