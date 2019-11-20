@@ -11,6 +11,16 @@
       "cpu" :"top -o %CPU -n 1 -b  | head -15",
       "disk":"df -H",
       "network":"/home/jes/prj/smartCam/SCS/pi/systemStatus/networkingCmd.sh"
+  },
+  "netMonitor": {
+      "host2Monitor" :"www.google.com",
+      "interval" :30,
+      "retryTimes": 5,
+      "failureCmd":"logger -t networkMonitor failing",
+      "favoriteWlan":"urban",
+      "wlanInterface":"wlan0",
+      "wanInterface":"ppp0",
+      "favoriteDefaultRoute":"ppp0"
   }
 }
 

@@ -19,6 +19,7 @@
     <button class="tablinks" onclick="openTab(event, 'mem')">Memory</button>
     <button class="tablinks" onclick="openTab(event, 'disk')">Disk</button>
     <button class="tablinks" onclick="openTab(event, 'network')">Network</button>
+    <button class="tablinks" onclick="openTab(event, 'netMonitor')">NetMonitor</button>
   </div>
 
 <!-- Tab content -->
@@ -48,6 +49,11 @@
 {% with element="network",dump=st.network %}
     {% include "dump.html" %}
 {% endwith %}
+  </div>
+
+  <div id="netMonitor" class="tabcontent">
+    {% include "netMonitor.html" %}
+  </div>
   </div>
 
 </div>

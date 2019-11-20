@@ -4,14 +4,14 @@
 
 {% if st.services %}
 <table>
-   <tr><th>Service</th><th>Enable</th><th>Active</th><th>Failed</th><th>#Starts</th><th>StartTime</th></tr>
+   <tr><th>Service</th><th>Enabled</th><th>Active</th><th>#Starts</th><th>#StartsToday</th><th>StartTime</th></tr>
    {% for key,value in st.services.items() %} 
    <tr>
     <td>{{key}}</td>
-    <td>{{value.enable}}</td>
+    <td>{{value.enabled}}</td>
     <td>{{value.active}}</td>
-    <td>{{value.failed}}</td>
     <td>{{value.restarts}}</td>
+    <td>{{value.restartsToday}}</td>
     <td>{{value.startTime}}</td>
    </tr>
    {% endfor %}

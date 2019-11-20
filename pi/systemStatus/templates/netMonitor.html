@@ -1,0 +1,11 @@
+<div>
+  <button onclick="reload()">REFRESH</button>&nbsp;&nbsp;
+  <br>
+
+{% if st.netMonitor %}
+{{st.netMonitor}}
+{% else %}
+No services info is available
+{% endif %}
+
+</div>
