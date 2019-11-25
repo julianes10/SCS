@@ -1,8 +1,35 @@
 <div>
-  <button onclick="reload()">REFRESH</button>&nbsp;&nbsp;
+  <button onclick="reloadNetMonitor()">REFRESH</button>&nbsp;&nbsp;
   <br>
 
 {% if st.netMonitor %}
+
+<table border="1">
+   <tr><th align="center" colspan="4">Connections status</th></tr>
+   <tr><th align="right" rowspan="4">Connected</th><td rowspan="4">{{st.netMonitor.connected}}</td></tr>
+     <tr><th align="right">totalConnectedSuccess</th> <td>{{st.netMonitor.totalConnectedSuccess }}</td></tr>
+     <tr><th align="right">totalConnectedFails</th>   <td>{{st.netMonitor.totalConnectedFails }}</td></tr>
+     <tr><th align="right">consecutiveFailures</th>   <td>{{st.netMonitor.consecutiveFailures }}</td></tr>
+   <tr><th align="right" rowspan="3">Connected WLAN</th><td rowspan="3">{{st.netMonitor.wlanOn}}</td></tr>
+     <tr><th align="right">ipv4</th><td>{{st.netMonitor.ipWlan}}</td>
+     <tr><th align="right">ipv6</th><td>{{st.netMonitor.ipv6Wlan}}</td></tr>
+   <tr><th align="right" rowspan="3">Connected WAN</th><td rowspan="3">{{st.netMonitor.wanOn}}</td></tr>
+     <tr><th align="right">ipv4</th><td >{{st.netMonitor.ipWan}}</td>
+     <tr><th align="right">ipv6</th><td>{{st.netMonitor.ipv6Wan}}</td></tr>
+   <tr><th align="right">Default Route</th><td colspan="3">{{st.netMonitor.defaultInterfaceRoute}}</td></tr>
+   <tr><th align="right">ESSID connected (using {{st.netMonitor.configuration.wlanInterface}})</th><td colspan="3">{{st.netMonitor.connectedWlan}}</td></tr>
+   <tr><th align="right">Available ESSIDs</th><td colspan="3">{{st.netMonitor.wlans}}</td></tr>
+</table>
+<br>
+{% if st.netMonitor.configuration %}
+<table border="1">
+   <tr><th align="center" colspan="2">Configuration</th></tr>
+   <tr><th align="right">Wan interface</th><td>{{st.netMonitor.configuration.wanInterface}}</td></tr>
+   <tr><th align="right">Wlan interface</th><td>{{st.netMonitor.configuration.wlanInterface}}</td></tr>
+   <tr><th align="right">Favorite Default route</th><td>{{st.netMonitor.configuration.favoriteDefaultRoute}}</td></tr>
+   <tr><th align="right">Favorite ESSIDs</th><td>{{st.netMonitor.preferredESSIDs}}</td></tr>
+</table>
+{% endif %}
 {{st.netMonitor}}
 {% else %}
 No services info is available

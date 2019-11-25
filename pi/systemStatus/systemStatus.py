@@ -55,6 +55,11 @@ class NetworkMonitor:
     self.totalConnectedFails=0
     self.consecutiveFailures=0
     self.nextTime=time.time()
+    cmd="cat /etc/wpa_supplicant/wpa_supplicant.conf  | grep -C3 ssid | grep 'ssid\|prio'"
+    self.preferredESSIDs=getOutputCommand(cmd,"unknown")
+    self.wlanOn=False
+    self.wanOn=False
+
 
   #--------------------------------------------
   def update(self):
@@ -112,7 +117,7 @@ class NetworkMonitor:
     self.wlans=[]
     if not "wlanInterface" in GLB_configuration["netMonitor"]:
       return
-    cmd="iwlist " + GLB_configuration["netMonitor"]["wlanInterface"] + " scanning | grep -i SSID | cut -d ':' -f2 | sed 's/\"//"
+    cmd="iwlist " + GLB_configuration["netMonitor"]["wlanInterface"] + " scanning | grep -i SSID | cut -d ':' -f2 | sed 's/\"//g'"
     aux=getOutputCommand(cmd," ")
     self.wlans=aux.split()
 
@@ -126,27 +131,61 @@ class NetworkMonitor:
   def getActiveInterfacesIp(self):
     if "wanInterface" in GLB_configuration["netMonitor"]:
       self.ipWan   =self.getIp("inet ",GLB_configuration["netMonitor"]["wanInterface"])
-      self.ipv6Wan =self.getIp("inet ",GLB_configuration["netMonitor"]["wanInterface"]) 
+      self.ipv6Wan =self.getIp("inet6 ",GLB_configuration["netMonitor"]["wanInterface"]) 
     if "wlanInterface" in GLB_configuration["netMonitor"]:
       self.ipWlan     =self.getIp("inet ",GLB_configuration["netMonitor"]["wlanInterface"])
       self.ipv6Wlan   =self.getIp("inet6 ",GLB_configuration["netMonitor"]["wlanInterface"])
+    self.wlanOn = (self.ipWlan != None and self.ipWlan != "unknown" and self.ipWlan!= "") or (self.ipv6Wlan != None and self.ipv6Wlan != "unknown" and self.ipv6Wlan!= "")
+    self.wanOn = (self.ipWan != None and self.ipWan != "unknown" and self.ipWan!= "") or (self.ipv6Wan != None and self.ipv6Wan != "unknown" and self.ipv6Wan!= "")
+ 
+
+
 
   #--------------------------------------------
   def getIp(self,ipv,iface):
-    cmd="ifconfig "+iface+" | grep "+ipv+" | awk '{print$2}'"
+    cmd="ifconfig "+iface+" | grep '"+ipv+"' | awk '{print$2}'"
     return getOutputCommand(cmd,"unknown")
 
   #--------------------------------------------
   def updateDefaultRoute(self):
-    self.defaultInterfaceRoute=self.getDefaultRoute()
+    self.getDefaultRoute()
     if not "favoriteDefaultRoute" in GLB_configuration["netMonitor"]:
       return
     if GLB_configuration["netMonitor"]["favoriteDefaultRoute"] == self.defaultInterfaceRoute:
       return
-    #Update route with preferred!!!!
-    cmd="ip r add default dev " + GLB_configuration["netMonitor"]["favoriteDefaultRoute"]
+      
+    iface2useInRoute=""
+    if GLB_configuration["netMonitor"]["favoriteDefaultRoute"] == GLB_configuration["netMonitor"]["wlanInterface"]: 
+      if self.wlanOn:
+          iface2useInRoute=GLB_configuration["netMonitor"]["wlanInterface"]
+          helper.internalLogger.debug("Route prefered wlan and it is on")
+      else:
+        if self.wanOn:
+          iface2useInRoute=GLB_configuration["netMonitor"]["wanInterface"]
+          helper.internalLogger.debug("Route prefered wlan but it is not on and wan yes")
+        else:
+          return
+
+    if GLB_configuration["netMonitor"]["favoriteDefaultRoute"] == GLB_configuration["netMonitor"]["wanInterface"]: 
+      if self.wanOn:
+          iface2useInRoute=GLB_configuration["netMonitor"]["wanInterface"]
+          helper.internalLogger.debug("Route prefered wan and it is on")
+      else:
+        if self.wlanOn:
+          iface2useInRoute=GLB_configuration["netMonitor"]["wlanInterface"]
+          helper.internalLogger.debug("Route prefered wan but it is not on and wlan yes")
+        else:
+          return    
+    if (iface2useInRoute ==""):
+      return
+    if iface2useInRoute == self.defaultInterfaceRoute:
+      helper.internalLogger.debug("Route prefered is already the default one.")
+      return
+
+    helper.internalLogger.debug("Lets try to add NEW default route...")
+    cmd="ip r add default dev " + iface2useInRoute
     if getResultCommand(cmd):
-      self.defaultInterfaceRoute=GLB_configuration["netMonitor"]["favoriteDefaultRoute"]
+      self.defaultInterfaceRoute=iface2useInRoute
 
   def toDict(self):
     rt={}
@@ -157,11 +196,19 @@ class NetworkMonitor:
     rt['ipWlan'] = self.ipWlan
     rt['ipWan'] = self.ipWan
     rt['ipv6Wlan'] = self.ipv6Wlan
-    rt['ipv6Wan'] = self.ipv6Wlan
+    rt['ipv6Wan'] = self.ipv6Wan
+
     rt['defaultInterfaceRoute'] = self.defaultInterfaceRoute
     rt['wlans'] = self.wlans
+    rt['connectedWlan']=self.connectedWlan
+    rt['preferredESSIDs']=self.preferredESSIDs
+
     if "netMonitor" in GLB_configuration:
       rt['configuration']=GLB_configuration["netMonitor"]
+
+    rt['wlanOn']=self.wlanOn
+    rt['wanOn']=self.wanOn
+
     return rt
 
 '''----------------------------------------------------------'''
