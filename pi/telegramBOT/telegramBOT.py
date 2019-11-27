@@ -31,7 +31,7 @@ _FINISHTASKS=False
   "subscribers": [], "nexttime": 1566428400.0}, 
   ... 
  ]
-"events": [
+"event": [
   {"name": "kk", "nbrOfTimes": 0, "nbrOfTimes": 0,"nbrOfTimesWithSubscribers": 0, "subscribers": []}, 
   ...
  ]
@@ -54,7 +54,7 @@ def format_datetime(value):
 '''----------------------------------------------------------'''
 '''----------------      API REST         -------------------'''
 '''----------------------------------------------------------'''
-api = Flask("api",template_folder="templates",static_folder='static')
+api = Flask("api",template_folder="templates",static_folder='static_telegram')
 api.jinja_env.filters['datetime'] = format_datetime
 
 
@@ -173,10 +173,10 @@ def eventTask(event):
   global bot
   helper.internalLogger.debug("New event to process: {0}".format(event))
 
-  #Purge stupid events TODO
+  #Purge stupid event TODO
   ongoing=LOCK()
-  if "events" in ongoing:
-    for item in ongoing["events"]:
+  if "event" in ongoing:
+    for item in ongoing["event"]:
       if ( event["name"] == item["name"] ):
         helper.internalLogger.debug("Known event, let's check subscribers... ")
         updateNbrOfTimesCounters(item)
@@ -405,10 +405,19 @@ def UNLOCK(data):
 
 '''----------------------------------------------------------'''
 def delSubscriber(id,tableName,item2subscribe=None):
+
   if item2subscribe==None:
      aux="ALL"
   else:
      aux=item2subscribe
+     if tableName == "event":
+      if not isValidItem(aux,GLB_configuration["event"],"name"):
+        bot.send_message(id,"Error. No {0} in configuration".format(aux))
+        return
+     else:
+      if not isValidItem(aux,GLB_configuration["periodic"],"action"):
+        bot.send_message(id,"Error. No {0} in configuration".format(aux))
+        return
 
 
   ongoing=LOCK()
@@ -450,10 +459,20 @@ def delSubscriber(id,tableName,item2subscribe=None):
  
 '''----------------------------------------------------------'''
 def addSubscriber(id,tableName,item2subscribe=None):
+
   if item2subscribe==None:
      aux="ALL"
   else:
-     aux=item2subscribe
+     aux=item2subscribe.lower()
+     if tableName == "event":
+        if not isValidItem(aux,GLB_configuration["event"],"name"):
+          bot.send_message(id,"Error. No {0} in configuration".format(aux))
+          return
+     else:
+        if not isValidItem(aux,GLB_configuration["periodic"],"action"):
+          bot.send_message(id,"Error. No {0} in configuration".format(aux))
+          return
+
 
 
   ongoing=LOCK()
@@ -505,10 +524,10 @@ def recoverOngoingTasks():
   if ("periodic" in GLB_configuration):
     ongoing["periodic"]=GLB_configuration["periodic"]
 
-  if ("events" in GLB_configuration):
-    ongoing["events"]=GLB_configuration["events"]
+  if ("event" in GLB_configuration):
+    ongoing["event"]=GLB_configuration["event"]
 
-  if ("periodic" in GLB_configuration) or ("events" in GLB_configuration):
+  if ("periodic" in GLB_configuration) or ("event" in GLB_configuration):
     # Recover form non-volatile information if any
     tmp={}
     try:
@@ -534,9 +553,9 @@ def recoverOngoingTasks():
 
     # Check that every action is still in new configuration
     try:
-     for itemCfg in ongoing["events"]:
+     for itemCfg in ongoing["event"]:
       helper.internalLogger.debug("Recovering subscribers for event {0}....".format(itemCfg["name"]))
-      for itemNV in tmp["events"]:
+      for itemNV in tmp["event"]:
         if itemNV["name"] == itemCfg["name"]:
           #Update subscribers
           itemCfg["subscribers"] = itemNV["subscribers"]
@@ -549,6 +568,19 @@ def recoverOngoingTasks():
 
   ##helper.internalLogger.debug("GGGGGGGGGGGGGGGGGGG {0}.".format(ongoing))
   UNLOCK(ongoing)
+
+
+
+'''----------------------------------------------------------'''
+def isValidItem(msg,l,key):
+  rt=False
+  # Custom by configuration options
+  for item in l:
+    if key in item:
+      if msg == item[key].lower():
+        rt=True
+  return rt
+
 
 
 '''----------------------------------------------------------'''
@@ -612,57 +644,82 @@ def main(configfile):
         msg=msg[1:]  #Trimming char /
           
       # Some built-ins options
-      if "start" in msg:
+      #-------------------------------------------------------------------
+      #-------------------------------------------------------------------
+      if "start" == msg:
         start=True
         if (len(msgList) == 1):
-          bot.send_message(message.chat.id, "Adding you as a subscribers for all periodic actions")
+          bot.send_message(message.chat.id, "Adding you as a subscribers for all periodic actions and event")
           addSubscriber(message.chat.id,"periodic")
-          return
+          addSubscriber(message.chat.id,"event")
         else:
           msg=msgList[1]
-          if "listen" in msg:  #this is for events
+          if "event" == msg or "e" == msg:  #this is for event tasks
             if (len(msgList) == 2): 
               bot.send_message(message.chat.id, "Adding you as a subscribers for all events")
-              addSubscriber(message.chat.id,"events")
+              addSubscriber(message.chat.id,"event")
             else: 
-              addSubscriber(message.chat.id,"events",msgList[2])
-            return
+              addSubscriber(message.chat.id,"event",msgList[2])
+          elif "periodic" == msg or "p" == msg:  #this is for periodic tasks
+            if (len(msgList) == 2): 
+              bot.send_message(message.chat.id, "Adding you as a subscribers for all periodic tasks")
+              addSubscriber(message.chat.id,"periodic")
+            else: 
+              addSubscriber(message.chat.id,"periodic",msgList[2])
           else:
-            stop=True   #Check below how try to match specific action
+             bot.send_message(message.chat.id, "Error, after start you must specify periodic or event [name]")
+          return
 
-
+      #-------------------------------------------------------------------
+      #-------------------------------------------------------------------
       if "stop" in msg:
         if (len(msgList) == 1):
           bot.send_message(message.chat.id, "Deleting you as a subscribers for all periodic actions")
           delSubscriber(message.chat.id,"periodic")
-          return
+          delSubscriber(message.chat.id,"event")
         else:
           msg=msgList[1]
-          if "listen" in msg:  #this is for events
+          if "event" == msg or "e" == msg:  #this is for event tasks
             if (len(msgList) == 2): 
               bot.send_message(message.chat.id, "Deleting you as a subscribers for all events")
-              delSubscriber(message.chat.id,"events")
+              delSubscriber(message.chat.id,"event")
             else:
-              delSubscriber(message.chat.id,"events",msgList[2])
-            return
+              delSubscriber(message.chat.id,"event",msgList[2])
+          elif "periodic" == msg or "p" == msg:  #this is for periodic tasks
+            if (len(msgList) == 2): 
+              bot.send_message(message.chat.id, "Deleting you as a subscribers for all periodic tasks")
+              delSubscriber(message.chat.id,"periodic")
+            else:
+              delSubscriber(message.chat.id,"periodic",msgList[2])
           else:
-            stop=True   #Check below how try to match specific action
+            bot.send_message(message.chat.id, "Error, after stop you must specify periodic or event [name]") 
+          return
 
 
       if "help" in msg or "helphidden" in msg:
 
         options="On demand menu actions:"
+        options=options+"\n-----------------------"
         for key,item in GLB_configuration["actions"].items():
           if ( (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False)) or ("helphidden" in msg):
             if key in GLB_configuration["menu"]:
               options=options+'\n  '+key
 
-        options=options+'\n'"Start/Stop all or specific periodic action:"
+        options=options+'\n'"start/stop periodic [name] or all:"
+        options=options+"\n------------------------------------"
         for item in GLB_configuration["periodic"]:
           if ( (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False)) or ("helphidden" in msg):
             options=options+'\n'"  " + item["action"]+ ". Each " + str(item["interval"]) + "(s)"
             if "start" in item:
               options=options+ ". Since " + item["start"]
+
+        options=options+'\n'"start/stop event [name] or all:"
+        options=options+"\n------------------------------------"
+        for item in GLB_configuration["event"]:
+          if ( (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False)) or ("helphidden" in msg):
+            options=options+'\n'"  " + item["name"]
+            if "action" in item:
+                options=options+ "  " + item["action"]
 
         bot.send_message(message.chat.id,options)
 
@@ -672,14 +729,6 @@ def main(configfile):
           if key in GLB_configuration["menu"]:
             #helper.internalLogger.debug("Checking key '{0}' and msg {1}".format(key,msg))
             if msg == key.lower():
-              if start:
-                helper.internalLogger.debug("Start subscription to action {0}".format(key))
-                addSubscriber(message.chat.id,"periodic",key)
-                return
-              if stop:
-                helper.internalLogger.debug("Stop subscription to action {0}".format(key))
-                delSubscriber(message.chat.id,"periodic",key)
-                return
               helper.internalLogger.debug("Command '{0}' executing...".format(key))
               result=runAction(item,message.text)  
               if result is None:

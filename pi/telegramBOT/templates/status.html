@@ -1,7 +1,7 @@
 <h2>TelegramBOT status</h2>
 {% if status.periodic %}
 <table>
-   <tr><th>Action</th><th>Interval</th><th>Start</th><th>#Attempts</th><th>#Executions</th><th>Next</th><th>Subscribers</th><th>Clean Subscribers</th></tr>
+   <tr><th>Periodic Action</th><th>Interval</th><th>Start</th><th>#Attempts</th><th>#Executions</th><th>Next</th><th>Subscribers</th><th>Clean Subscribers</th></tr>
    {% for prj in status.periodic %} 
    <tr>
     <td>{{prj.action}}</td>
@@ -19,3 +19,22 @@
 {% else %}
 No periodic task defined right now
 {% endif %}
+{% if status.event %}
+<table>
+   <tr><th>Event</th><th>Action</th><th>#Attempts</th><th>#Executions#Executions</th><th>Subscribers</th><th>Clean Subscribers</th></tr>
+   {% for prj in status.event %} 
+   <tr>
+    <td>{{prj.name}}</td>
+    <td>{{prj.event}}</td>
+    <td>{{prj.nbrOfTimes}}</td>
+    <td>{{prj.nbrOfTimesWithSubscribers}}</td>
+    <td>{{prj.subscribers}}</td>
+    <td><form action="{{ url_for('telegramBOT_gui_clean',name=prj.action) }}"> <input type="submit" value="CLEAN" />
+    </form></td>
+   </tr>
+   {% endfor %}
+</table>
+{% else %}
+No periodic task defined right now
+{% endif %}
+
