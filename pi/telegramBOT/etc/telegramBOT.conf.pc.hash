@@ -6,7 +6,6 @@
   "host":"0.0.0.0",
   "ongoingDB":"/tmp/telegramBOT.ongoing",
   "ongoingDBNV":"/tmp/telegramBOT.ongoingNV",
-
   "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run","mem","status"],
   "pollingTimeout" : 10,
   "actions" : { 
@@ -32,6 +31,7 @@
     { "name": "pepito2","action" : "mem"},
     { "name": "pepito3","action" : "fotoHD"},
     { "name": "pepito4","action" : "foto"}
-  ]
+  ],
+  "eventBOOT": [{"name":"pepito4"},{"name":"pepito1"}]
 }
 

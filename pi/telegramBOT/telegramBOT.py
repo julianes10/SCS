@@ -117,7 +117,7 @@ def periodicTasks():
   global bot
   helper.internalLogger.debug("TeleBot periodic start")
   while not _FINISHTASKS:
-    ongoing=LOCK()
+    ongoing=LOCK()  
     now=time.time()
     for item in ongoing["periodic"]:
       ## Tunning firstime
@@ -162,7 +162,8 @@ def updateNbrOfTimesCounters(item):
           item["nbrOfTimes"]=0
           item["nbrOfTimesWithSubscribers"]=0
   item["nbrOfTimes"] = item["nbrOfTimes"] + 1
-  if len(item["subscribers"])>0:
+  if "subscribers" in item:
+    if len(item["subscribers"])>0:
           item["nbrOfTimesWithSubscribers"] = item["nbrOfTimesWithSubscribers"] + 1
 
 '''----------------------------------------------------------'''
@@ -171,18 +172,20 @@ def updateNbrOfTimesCounters(item):
 
 def eventTask(event):
   global bot
+  rt=True
   helper.internalLogger.debug("New event to process: {0}".format(event))
-
   #Purge stupid event TODO
   ongoing=LOCK()
-  if "event" in ongoing:
+
+  try: 
+   if "event" in ongoing:
     for item in ongoing["event"]:
       if ( event["name"] == item["name"] ):
         helper.internalLogger.debug("Known event, let's check subscribers... ")
         updateNbrOfTimesCounters(item)
 
         #Sending event indication
-        sendTextMessageToSubscribers(item["subscribers"],"EVENT" + event["name"])
+        sendTextMessageToSubscribers(item["subscribers"],"EVENT: " + event["name"])
 
         #Executing event, let's check if come with explicit items
         if "text" in event:
@@ -204,14 +207,20 @@ def eventTask(event):
         if "action" in item:
             runActionAndSendMessageToSubscribers(item["subscribers"],item["action"])
 
-
-
+  except Exception as e:
+    helper.internalLogger.error('Error: processing event {0}'.format(event))
+    e = sys.exc_info()[0]
+    helper.einternalLogger.exception(e)
+    rt=False
   #helper.internalLogger.critical('ongoing {0}'.format(ongoing))
   UNLOCK(ongoing)
 
+  return rt
 '''----------------------------------------------------------'''
 def sendTextMessageToSubscribers(subscriberList, text):
+  helper.internalLogger.debug("Text to send : {0}".format(text))
   for i in subscriberList:
+    helper.internalLogger.debug("Text to : {0}".format(i))
     bot.send_message(i,text)
 
 '''----------------------------------------------------------'''
@@ -520,16 +529,20 @@ def recoverOngoingTasks():
 
   UNLOCK({}) # cleanup
   ongoing=LOCK()
-  
+
+  ongoing["periodic"]={}
   if ("periodic" in GLB_configuration):
     ongoing["periodic"]=GLB_configuration["periodic"]
 
+  ongoing["event"]={}
   if ("event" in GLB_configuration):
     ongoing["event"]=GLB_configuration["event"]
 
   if ("periodic" in GLB_configuration) or ("event" in GLB_configuration):
     # Recover form non-volatile information if any
     tmp={}
+    tmp["event"]={}
+    tmp["periodic"]={}
     try:
       with open(GLB_configuration["ongoingDBNV"]) as json_data:
           tmp = json.load(json_data)
@@ -541,10 +554,13 @@ def recoverOngoingTasks():
     try:
      for itemCfg in ongoing["periodic"]:
       helper.internalLogger.debug("Recovering subscribers for action {0}....".format(itemCfg["action"]))
-      for itemNV in tmp["periodic"]:
+      if "periodic" in tmp:
+       for itemNV in tmp["periodic"]:
         if itemNV["action"] == itemCfg["action"]:
           #Update subscribers
-          itemCfg["subscribers"] = itemNV["subscribers"]
+          itemCfg["subscribers"] = []
+          if "subscribers" in itemNV:
+            itemCfg["subscribers"] = itemNV["subscribers"]
           helper.internalLogger.debug("Recovered subscribers for periodic action {0}:{1}.".format(itemCfg["action"],itemCfg["subscribers"]))
           break
     except Exception as e:
@@ -555,10 +571,13 @@ def recoverOngoingTasks():
     try:
      for itemCfg in ongoing["event"]:
       helper.internalLogger.debug("Recovering subscribers for event {0}....".format(itemCfg["name"]))
-      for itemNV in tmp["event"]:
+      if "event" in tmp:
+       for itemNV in tmp["event"]:
         if itemNV["name"] == itemCfg["name"]:
           #Update subscribers
-          itemCfg["subscribers"] = itemNV["subscribers"]
+          itemCfg["subscribers"] = []
+          if "subscribers" in itemNV:
+            itemCfg["subscribers"] = itemNV["subscribers"]
           helper.internalLogger.debug("Recovered subscribers for event {0}:{1}.".format(itemCfg["name"],itemCfg["subscribers"]))
           break
     except Exception as e:
@@ -618,21 +637,25 @@ def main(configfile):
   try:    
     logging.getLogger("requests").setLevel(logging.DEBUG)
 
-    helper.internalLogger.debug("Starting restapi...")
- 
-    apiRestTask=threading.Thread(target=apirest_task,name="restapi")
-    apiRestTask.daemon = True
-    apiRestTask.start()
-
-
 
     helper.internalLogger.debug("Calling telepot.Bot...")
     global bot
     pt=None
     bot = telebot.TeleBot(GLB_configuration["hash"])
     helper.internalLogger.debug("TeleBot returned")
-
     
+
+    helper.internalLogger.debug("Starting restapi...")
+    apiRestTask=threading.Thread(target=apirest_task,name="restapi")
+    apiRestTask.daemon = True
+    apiRestTask.start()
+
+    helper.internalLogger.debug("Starting eventBootTask...")
+    eventBootTask=threading.Thread(target=eventBoot_task,name="eventBOOT")
+    eventBootTask.daemon = True
+    eventBootTask.start()
+
+
     @bot.message_handler(func=lambda message: True)
     def process_all(message):
       start=False
@@ -762,6 +785,16 @@ def main(configfile):
       pt.join()
     loggingEnd()
 
+
+def eventBoot_task():
+  helper.internalLogger.debug("Event boot task starting...")
+  time.sleep(3)  #let's wait a bit to let startup ok
+  if "eventBOOT" in GLB_configuration:
+    helper.internalLogger.debug("Triggering event ...")
+    for i in GLB_configuration["eventBOOT"]:
+      eventTask(i)
+
+  helper.internalLogger.debug("Boot task DONE")
 
 '''----------------------------------------------------------'''
 '''----------------     apirest_task      -------------------'''
