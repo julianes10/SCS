@@ -79,18 +79,36 @@ class ServoTrackDirection:
     self.reset()
         
   def reset(self):
-    self.min=0
-    self.max=0
-    self.isMain=False
-    self.duration=0
-    self.current=0
+    self.iniCurrent=0
+    self.ini=0
+    self.end=0
+    self.speed=0
+    self.duration=1
+
+  def start(self,i,e,t):
+    self.ini=i
+    self.end=e
+    self.iniCurrent=self.ini
+    self.duration=t
+    self.speed=(self.end-self.ini)/self.duration
+
+  def startReverse(self):
+    self.iniCurrent=self.end
+    self.speed=(self.ini-self.end)/self.duration
+
+  def restart(self):
+    self.iniCurrent=self.ini
+    self.speed=(self.end-self.ini)/self.duration
+
+    
+  def refresh(self,travelTime):
+    return round(self.iniCurrent + (self.speed * travelTime))
+
   def toDict(self):
     rt={}
-    rt['min'] = self.min
-    rt['max'] = self.max
-    rt['isMain'] = self.isMain
-    rt['duration'] = self.duration
-    rt['current'] = self.current
+    rt['ini'] = self.ini
+    rt['end'] = self.end
+    rt['speed'] = self.speed
     return rt
 
 
@@ -102,22 +120,88 @@ class ServoTrack:
     self.tilt=ServoTrackDirection()
     self.reset()
 
-
   def reset(self):
-    self.enable=False
     self.trackDuration=0
     self.trackStartTime=0
     self.trackFinishedTime=0
     self.repeatTimes=0
+    self.repeatCounter=0
+    self.active=False
+    self.reverse=False
+    self.reverseDone=False
     self.pan.reset()
     self.tilt.reset()
 
+
+
+  def start(self,pan1,pan2,tilt1,tilt2,duration,reverse,ntimes):
+    helper.internalLogger.debug("start...from {0},{1} to {2},{3} in {4} seconds".format(pan1,tilt1,pan2,tilt2,duration))   
+    self.trackStartTime=time.time()
+    self.trackDuration=duration
+    self.trackFinishedTime=self.trackStartTime+self.trackDuration
+    self.pan.start(pan1,pan2,duration)
+    self.tilt.start(tilt1,tilt2,duration)
+    self.reverse=reverse
+    self.reverseDone=False
+    self.repeatTimes=ntimes
+    self.repeatCounter=0
+    self.active=True
+
+
+
+  def isActive(self):
+    return self.active
+
+  def refresh(self):
+    a=False
+    p=0
+    t=0
+    now=time.time()
+    if now <= self.trackFinishedTime and now >= self.trackStartTime:
+       d=now - self.trackStartTime
+       p=self.pan.refresh(d)
+       t=self.tilt.refresh(d)
+       a=True
+
+    if self.active==True and a==False:
+      helper.internalLogger.debug("Round done")
+      # Check reverse and times:
+      if (self.reverse and not self.reverseDone):
+        helper.internalLogger.debug("Starting reverse...")
+        self.reverseDone=True
+        self.pan.startReverse()
+        self.tilt.startReverse() 
+     
+        self.trackStartTime=time.time()
+        self.trackFinishedTime=self.trackStartTime+self.trackDuration
+        p=self.pan.refresh(0)
+        t=self.tilt.refresh(0)
+
+        a=True
+      else:
+        self.repeatCounter=self.repeatCounter+1 
+        helper.internalLogger.debug("Round complete done {0}/{1}".format(self.repeatCounter,self.repeatTimes))
+        if self.repeatCounter < self.repeatTimes:
+          helper.internalLogger.debug("Starting new round...")
+          self.reverseDone=False
+          self.pan.restart()
+          self.tilt.restart()
+          self.trackStartTime=time.time()
+          self.trackFinishedTime=self.trackStartTime+self.trackDuration
+          p=self.pan.refresh(0)
+          t=self.tilt.refresh(0)
+          a=True
+         
+    self.active=a
+    return a,p,t
+
+
   def toDict(self):
     rt={}
-    rt['enable']=self.enable
-    if self.enable:
-      rt['pan'] = self.pan.ToDict()
-      rt['tilt'] = self.tilt.ToDict()
+    rt['active']=self.active
+    if self.active:
+      rt['pan'] = self.pan.toDict()
+      rt['tilt'] = self.tilt.toDict()
       rt['trackDuration'] = self.trackDuration
       rt['trackStartTime'] = self.trackStartTime
       rt['trackFinishedTime'] = self.trackFinishedTime
@@ -129,6 +213,7 @@ class ServoTrack:
 class ServoHandler:
   def __init__(self,cfg):
     self.pwm=None
+
     if amIaPi():
       self.setPan(0)
       self.setTilt(0)
@@ -143,7 +228,7 @@ class ServoHandler:
         self.setTilt(cfg["initTilt"])
 
   def end(self):
-    stopDriver()
+    self.stopDriver()
 
 
   def restartDriver(self):
@@ -187,7 +272,7 @@ class ServoHandler:
       if self.pwm is None:
         self.restartDriver()
       self.pwm.setRotationAngle(1,int(value))
-      self.stopDriver()
+      #self.stopDriver()
 
 
   def setTilt(self,value):
@@ -199,16 +284,41 @@ class ServoHandler:
       self.pwm.setRotationAngle(0,int(value))
       #self.stopDriver()
 
+
+  def startTrack(self,pan1,pan2,tilt1,tilt2,duration,bk,reverse,ntimes):
+    self.panBK=self.pan
+    self.tiltBK=self.tilt
+    self.backAfterAutoTrack=bk
+    self.autoTrack.start(pan1,pan2,tilt1,tilt2,duration,reverse,ntimes)
+
+  def refreshTrack(self):
+    if self.autoTrack.isActive():
+      a,p,t = self.autoTrack.refresh()
+      if (a):
+        self.setPan(p)
+        self.setTilt(t)
+      else:
+        if self.backAfterAutoTrack:
+          self.setPan(self.panBK)
+          self.setTilt(self.tiltBK)
+
+
   def reset(self):
     self.pan = 0
     self.tilt = 0
+    self.panBK = 0
+    self.tiltBK = 0
     self.autoTrack.reset()
+    self.backAfterAutoTrack=False
 
   def toDict(self):
     rt={}
     rt['pan'] = self.pan
     rt['tilt'] = self.tilt
+    rt['panBK'] = self.panBK
+    rt['tiltBK'] = self.tiltBK
     rt['autoTrack'] = self.autoTrack.toDict()
+    rt['backAfterAutoTrack'] = self.backAfterAutoTrack
     return rt
 
 
@@ -271,6 +381,40 @@ def post_picam_position():
     rtjson=jsonify({'result': 'KO'})
     helper.internalLogger.debug("status failed")
   return rtjson
+
+
+'''----------------------------------------------------------'''
+@api.route('/api/v1.0/picam/track',methods=["POST"])
+def post_picam_track():
+  rt = {}
+  try:
+
+      helper.internalLogger.debug("new track required")
+      helper.internalLogger.debug("Processing new track request:...{0}".format(request.json))
+      data = request.get_json()
+      rt['result']='OK'     
+  
+      rt['data']=requestNewTrack(data)
+ 
+      rtjson=json.dumps(rt)
+
+  except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.error('Error: track json')
+    helper.einternalLogger.exception(e)  
+    rtjson=jsonify({'result': 'KO'})
+    helper.internalLogger.debug("status failed")
+  return rtjson
+
+
+'''----------------------------------------------------------'''
+def requestNewTrack(data):
+      global GLB_servo
+     
+      GLB_servo.startTrack(data["pan"]["ini"],data["pan"]["end"],data["tilt"]["ini"],data["tilt"]["end"],data["duration"],data["backPosition"],data["reverse"],data["ntimes"])
+
+      return GLB_servo.toDict()
+
 
 '''----------------------------------------------------------'''
 def requestNewPosition(data):
@@ -417,7 +561,8 @@ def main(configfile):
 
      while True:
        #helper.internalLogger.critical("Polling, nothing to poll yet")
-       time.sleep(1)
+       time.sleep(0.1)
+       GLB_servo.refreshTrack()
   
      if not GLB_servo is None:
        GLB_servo.end()

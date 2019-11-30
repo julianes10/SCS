@@ -61,3 +61,21 @@ function reloadStatus(){
     xhttp.send();
 }
 
+//-------------------------------------------
+function ajax_request_track(bk,pi,pe,ti,te,d,r,nt){
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+         if (this.readyState == 4 && this.status == 200) {
+             //alert(this.responseText);
+             document.getElementById("position").innerHTML = this.responseText;
+         }
+    };
+
+    json=JSON.stringify({ backPosition : new Boolean(bk), pan: { ini: pi, end: pe}, tilt: { ini: ti, end: te},duration : d , "reverse": new Boolean(r), ntimes : new Number(nt) }) 
+
+   
+    xhttp.open("POST", "/api/v1.0/picam/track", true);
+    xhttp.setRequestHeader("Content-type", "application/json");
+    xhttp.send(json);
+}
+
