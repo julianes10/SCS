@@ -183,6 +183,11 @@ class NetworkMonitor:
       return
 
     helper.internalLogger.debug("Lets try to add NEW default route...")
+    # delete current default route
+    cmd="ip r del default"
+    getResultCommand(cmd)
+
+    # add new default route
     cmd="ip r add default dev " + iface2useInRoute
     if getResultCommand(cmd):
       self.defaultInterfaceRoute=iface2useInRoute
@@ -220,6 +225,11 @@ api = Flask("api",template_folder="templates",static_folder='static_systemStatus
 @api.route('/',methods=["GET"])
 def home():
     return render_home_tab('services')
+
+'''----------------------------------------------------------'''
+@api.route('/netMonitor',methods=["GET"])
+def gui_home_netMonitor():
+    return render_home_tab('netMonitor')
 
 '''----------------------------------------------------------'''
 def render_home_tab(tab):
