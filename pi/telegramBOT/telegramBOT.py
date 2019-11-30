@@ -187,7 +187,7 @@ def eventTask(event):
         #Sending event indication
         sendTextMessageToSubscribers(item["subscribers"],"EVENT: " + event["name"])
 
-        #Executing event, let's check if come with explicit items
+        #Executing event, let's check if come with EXCLICIT items
         if "text" in event:
             sendTextMessageToSubscribers(item["subscribers"],event["text"])
         if "img" in event:
@@ -196,8 +196,6 @@ def eventTask(event):
             sendVideoMessageToSubscribers(item["subscribers"],event["video"])
         if "filetext" in event:
             sendTextFileMessageToSubscribers(item["subscribers"],event["filetext"])
-
-        #TODO, explicit image, filetext or video
 
         #Later, let's check if come with dynamic action associated
         if "action" in event:
@@ -218,6 +216,8 @@ def eventTask(event):
   return rt
 '''----------------------------------------------------------'''
 def sendTextMessageToSubscribers(subscriberList, text):
+  if text == "":
+    return
   helper.internalLogger.debug("Text to send : {0}".format(text))
   for i in subscriberList:
     helper.internalLogger.debug("Text to : {0}".format(i))

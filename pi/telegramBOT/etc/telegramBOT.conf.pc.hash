@@ -6,6 +6,7 @@
   "host":"0.0.0.0",
   "ongoingDB":"/tmp/telegramBOT.ongoing",
   "ongoingDBNV":"/tmp/telegramBOT.ongoingNV",
+
   "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run","mem","status"],
   "pollingTimeout" : 10,
   "actions" : { 
@@ -21,7 +22,7 @@
     "status": { "cmd" : "wkhtmltoimage localhost:5061 /tmp/status.jpg >/dev/null", "image":"/tmp/status.jpg","hidden":true}
   },
   "periodic" : [
-    { "action" : "test","interval":7200, "start" : "01:00:00"},
+    { "action" : "test","interval":10, "start" : "00:00:00"},
     { "action" : "mem","interval":40},
     { "action" : "fotoHD","interval":60, "start" : "01:26:00"},
     { "action" : "foto","interval":3600, "start" : "15:51:00"}

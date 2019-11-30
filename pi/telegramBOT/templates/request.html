@@ -1,9 +1,21 @@
 <h2>Raise a new async event to your BOT engine to distribute among subscribers</h2>
+
+{% if status.event %}
+
 <form event="{{ url_for('telegramBOT_home') }}" method = "POST">
-    <table>
-      <tr><td>Name (*)</td><td><input type=text name=name required></td></tr>
-      <tr><td>Predefine action</td><td><input type=number name=action></td></tr>
-      <tr><td>Text to send</td><td><input type=number name=text></td></tr> 
-     </table>
-     <input type=submit value="Request it">
+  <table>
+    <tr><td>Event name (*)</td><td>
+      <select name="name" required>
+       {% for prj in status.event %} 
+       <option value="{{prj.name}}">{{prj.name}} (associated action {{prj.action}})</option>
+       {% endfor %}
+      </select>
+    </td></tr>
+    <tr><td>Extra text to be sent</td><td><input type=text name=text></td></tr> 
+  </table>
+  <input type=submit value="Request to send this event to subscribers">
 </form>
+
+{% else %}
+Events are not configured. Review configuration and restart telegramBOT service
+{% endif %}
