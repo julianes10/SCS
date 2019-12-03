@@ -1,3 +1,9 @@
+<button onclick="ajax_auto_update_position()">CRAZY REFRESH</button>
+<table class="cellCenter">
+   <tr><th>PAN</th><th>TILT</th></tr>
+   <tr><td id=panvalue>{{st.status.servo.pan}} </th><td id=tiltvalue>{{st.status.servo.pan}}</th></tr>
+</table>
+
 <table class="cellCenter">
    <tr>
     <td></td>
@@ -47,12 +53,18 @@
    <tr><td><button onclick="ajax_set_full_position(0,0)">EXTREME POSITION 1</button></td></tr>
    <tr><td><button onclick="ajax_set_full_position(180,90)">EXTREME POSITION 2</button></td></tr>
    <tr><td><button onclick="ajax_set_full_position(90,45)">CENTER</button></td></tr>
+
 </table>
 
 <table>
    <tr><td>Ask for a track</td></tr>
-   <tr><td><button onclick="ajax_request_track(true,0,180,45,45,15,true,5)">TrackNO</button></td></tr>
-   <tr><td><button onclick="ajax_request_track(true,90,90,0,90,15,true,2)">TrackYES</button></td></tr>
+   <tr><td><button onclick="ajax_request_stop_track()">RESET TRACKS</button></td></tr>
+   <tr><td><button onclick="ajax_request_simple_track(true,0,180,45,45,5,true,2)">TrackNO</button></td></tr>
+   <tr><td><button onclick="ajax_request_simple_track(true,90,90,0,90,5,true,2)">TrackYES</button></td></tr>
+   <tr><td><button onclick="ajax_request_simple_track(true,0,180,45,45,1,true,2)">TrackNO-NO</button></td></tr>
+   <tr><td><button onclick="ajax_request_simple_track(true,90,90,0,90,1,true,2)">TrackYES-YES</button></td></tr>
+   <tr><td><button onclick="ajax_request_track_square()">TrackSQUARE</button></td></tr>
+   <tr><td><button onclick="ajax_request_track_saw()">TrackSAW</button></td></tr>
 </table>
 
 <div id=position>

@@ -74,6 +74,8 @@ def format_datetime(value):
     return aux 
 
 '''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
 class ServoTrackDirection:
   def __init__(self):
     self.reset()
@@ -83,7 +85,7 @@ class ServoTrackDirection:
     self.ini=0
     self.end=0
     self.speed=0
-    self.duration=1
+    self.duration=0
 
   def start(self,i,e,t):
     self.ini=i
@@ -109,6 +111,8 @@ class ServoTrackDirection:
     rt['ini'] = self.ini
     rt['end'] = self.end
     rt['speed'] = self.speed
+    rt['duration'] = self.duration
+    rt['iniCurrent'] = self.iniCurrent
     return rt
 
 
@@ -131,22 +135,40 @@ class ServoTrack:
     self.reverseDone=False
     self.pan.reset()
     self.tilt.reset()
+    self.trackQueue=[] 
 
 
 
-  def start(self,pan1,pan2,tilt1,tilt2,duration,reverse,ntimes):
-    helper.internalLogger.debug("start...from {0},{1} to {2},{3} in {4} seconds".format(pan1,tilt1,pan2,tilt2,duration))   
+  def start(self,data):
+    self.reset()
+    for i in data:
+      self.enqueue(i)
+    if (len(data)): 
+      self.active=True
+
+  def enqueue(self,data):
+    self.trackQueue.append(data)
+
+  def startItem(self,data):
+    helper.internalLogger.debug("starting an item to track: {0}".format(data))
     self.trackStartTime=time.time()
-    self.trackDuration=duration
-    self.trackFinishedTime=self.trackStartTime+self.trackDuration
-    self.pan.start(pan1,pan2,duration)
-    self.tilt.start(tilt1,tilt2,duration)
-    self.reverse=reverse
+    self.pan.start(data["pan"]["ini"],data["pan"]["end"],data["duration"])
+    self.tilt.start(data["tilt"]["ini"],data["tilt"]["end"],data["duration"])
+    self.reverse=data["reverse"]
     self.reverseDone=False
-    self.repeatTimes=ntimes
+    self.repeatTimes=data["ntimes"]
     self.repeatCounter=0
+    self.trackDuration=data["duration"]
+    self.trackFinishedTime=self.trackStartTime+self.trackDuration
     self.active=True
 
+
+  def dequeue(self):
+    rt=None
+    if len(self.trackQueue):
+      rt=self.trackQueue.pop(0)
+      helper.internalLogger.debug("Poping out an item to track. Pending {0}".format(len(self.trackQueue)))
+    return rt
 
 
   def isActive(self):
@@ -191,7 +213,17 @@ class ServoTrack:
           p=self.pan.refresh(0)
           t=self.tilt.refresh(0)
           a=True
-         
+        else:
+          helper.internalLogger.debug("Check if item enqueued to track...")
+          item=self.dequeue()
+          if item != None:
+            self.startItem(item)
+            p=self.pan.refresh(0)
+            t=self.tilt.refresh(0)
+            a=True
+          else:
+            helper.internalLogger.debug("Nothing to track.")
+
     self.active=a
     return a,p,t
 
@@ -206,6 +238,10 @@ class ServoTrack:
       rt['trackStartTime'] = self.trackStartTime
       rt['trackFinishedTime'] = self.trackFinishedTime
       rt['repeatTimes'] = self.repeatTimes
+      rt['repeatCounter'] = self.repeatCounter
+      rt['reverse'] = self.reverse
+      rt['reverseDone'] = self.reverseDone
+      rt['trackQueue'] = self.trackQueue
 
     return rt
 
@@ -285,11 +321,13 @@ class ServoHandler:
       #self.stopDriver()
 
 
-  def startTrack(self,pan1,pan2,tilt1,tilt2,duration,bk,reverse,ntimes):
+  def startTrack(self,data):
     self.panBK=self.pan
     self.tiltBK=self.tilt
-    self.backAfterAutoTrack=bk
-    self.autoTrack.start(pan1,pan2,tilt1,tilt2,duration,reverse,ntimes)
+    self.backAfterAutoTrack=False
+    if "backPosition" in data:
+      self.backAfterAutoTrack=data["backPosition"]
+    self.autoTrack.start(data["data"])
 
   def refreshTrack(self):
     if self.autoTrack.isActive():
@@ -360,19 +398,22 @@ def render_home_tab(tab):
   return render_template('index.html', title="Live picam",st=st,display=display)
 
 '''----------------------------------------------------------'''
-@api.route('/api/v1.0/picam/position',methods=["POST"])
+@api.route('/api/v1.0/picam/position',methods=["POST","GET"])
 def post_picam_position():
   rt = {}
-  try:
 
+  try:
+    if request.json: 
       helper.internalLogger.debug("new positon required")
       helper.internalLogger.debug("Processing new request:...{0}".format(request.json))
       data = request.get_json()
-      rt['result']='OK'     
+    else:
+      rt['result']='OK'  
+      data={}   
   
-      rt['data']=requestNewPosition(data)
+    rt['data']=requestNewPosition(data)
  
-      rtjson=json.dumps(rt)
+    rtjson=json.dumps(rt)
 
   except Exception as e:
     e = sys.exc_info()[0]
@@ -411,7 +452,7 @@ def post_picam_track():
 def requestNewTrack(data):
       global GLB_servo
      
-      GLB_servo.startTrack(data["pan"]["ini"],data["pan"]["end"],data["tilt"]["ini"],data["tilt"]["end"],data["duration"],data["backPosition"],data["reverse"],data["ntimes"])
+      GLB_servo.startTrack(data)
 
       return GLB_servo.toDict()
 
@@ -561,7 +602,7 @@ def main(configfile):
 
      while True:
        #helper.internalLogger.critical("Polling, nothing to poll yet")
-       time.sleep(0.1)
+       time.sleep(0.05)
        GLB_servo.refreshTrack()
   
      if not GLB_servo is None:
