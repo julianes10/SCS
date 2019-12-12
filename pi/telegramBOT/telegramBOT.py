@@ -148,7 +148,7 @@ def periodicTasks():
         helper.internalLogger.debug("EVAL: now       {0} \t| {1}".format(now,datetime.fromtimestamp(now)))
         helper.internalLogger.debug("EVAL: nextTime {0} \t\t| {1}".format(item["nextTime"],datetime.fromtimestamp(item["nextTime"])))
         helper.internalLogger.debug("EVAL: interval  {0}".format(item["interval"]))
-        item["nextTime"]=item["nextTime"]+item["interval"]    
+        item["nextTime"]=now+item["interval"]    
         updateNbrOfTimesCounters(item)
         runActionAndSendMessageToSubscribers(item["subscribers"],item["action"])
     #helper.internalLogger.critical('ongoing {0}'.format(ongoing))
