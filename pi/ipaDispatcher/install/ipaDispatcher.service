@@ -4,7 +4,7 @@ After=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/opt/PROJECT_NAME/gaIpaDispatcher/install/gaIpaDispatcher.sh
+ExecStart=/opt/PROJECT_NAME/ipaDispatcher/install/ipaDispatcher.sh
 Restart=always
 
 [Install]

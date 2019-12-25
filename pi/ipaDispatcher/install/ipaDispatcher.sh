@@ -6,4 +6,4 @@ amixer -c 0 set PCM 100%
 #NOTE IT WILL PICK AS DEFAULT:
 # --configfile  '/etc/ipaem/ipaem.conf'
 # --credentials '/etc/ipaem/google-oauthlib-tool/credentials.json'
-python /opt/PROJECT_NAME/gaIpaDispatcher/gaIpaDispatcher.py  --configfile  /etc/gaIpaDispatcher.conf 
+python /opt/PROJECT_NAME/ipaDispatcher/ipaDispatcher.py  --configfile  /etc/ipaDispatcher.conf 

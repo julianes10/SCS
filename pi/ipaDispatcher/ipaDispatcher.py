@@ -24,11 +24,7 @@ import threading
 
 
 
-import google.oauth2.credentials
 
-from google.assistant.library import Assistant
-from google.assistant.library.event import EventType
-from google.assistant.library.file_helpers import existing_file
 
 import argparse
 import time
@@ -52,14 +48,20 @@ from collections import OrderedDict
 api = Flask("api")
 
 
-@api.route('/ipaem/api/v1.0/hotword', methods=['POST'])
+@api.route('/ipadispatcher/api/v1.0/hotword', methods=['POST'])
 def get_hotword():
     rt=jsonify({'result': 'KO'})
     if request.json and 'debug' in request.json:
       helper.internalLogger.debug("REST hotword debug: {}".format(request.json['debug']))
    
-    if ga.getBusy()==False:
-      helper.internalLogger.debug("Alternative hotword")
+
+    global ga
+    global assistant
+
+    if ga==None:
+      helper.internalLogger.debug("Alternative hotword but ga not ready")
+    elif ga.getBusy()==False:
+      helper.internalLogger.debug("Alternative hotword is triggered. Starting conversation")
       assistant.start_conversation()
       rt=jsonify({'result': 'OK'})
     else:
@@ -67,13 +69,18 @@ def get_hotword():
     return rt
 
 
-@api.route('/ipaem/api/v1.0/localaction', methods=['POST'])
+@api.route('/ipadispatcher/api/v1.0/dispatch', methods=['POST'])
 def post_localaction():
-    rt=jsonify({'result': 'TODO'})
-    if not request.json or not 'input' in request.json:
+    rt=jsonify({'result': 'KO'})
+    global configuration 
+    if not request.json:
+        helper.internalLogger.debug("It is not a json. Back with error")
         abort(400)
-    #TBD 
-    return rt, 201
+    helper.internalLogger.debug("Processing {0}...".format(request.json))
+    if "request" in request.json:
+      checkAnswer(configuration["LocalActions"],request.json["request"],None,"")
+      rt=jsonify({'result': 'OK'})
+    return rt
 
 '''----------------------------------------------------------'''
 '''----------------      GA control object  -----------------'''
@@ -249,18 +256,18 @@ ON_CONVERSATION_TURN_FINISHED = 9
 '''----------------       M A I N         -------------------'''
 '''----------------------------------------------------------'''
 
+
+
 def main(configfile):
-  print('IPAEM-start -----------------------------')   
+ try:
+  print('IPADISPATCHER-start -----------------------------')   
 
-  global ga
-  global assistant
+
   global configuration
-  ga=Ga()
-
   # Loading config file,
   # Default values
-  cfg_log_traces="ipaem.log"
-  cfg_log_exceptions="ipaeme.log"
+  cfg_log_traces="ipadispatcher.log"
+  cfg_log_exceptions="ipadispatchere.log"
   # Let's fetch data
   with open(configfile) as json_data:
       configuration = json.load(json_data, object_pairs_hook=OrderedDict)
@@ -272,8 +279,8 @@ def main(configfile):
         cfg_log_exceptions = configuration["log"]["logExceptions"]
   helper.init(cfg_log_traces,cfg_log_exceptions)
   helper.internalLogger.debug('See logs traces in: {0} and exeptions in: {1}-----------'.format(cfg_log_traces,cfg_log_exceptions))  
-  helper.internalLogger.critical('IPAEM-start -------------------------------')  
-  helper.einternalLogger.critical('IPAEM-start -------------------------------')
+  helper.internalLogger.critical('IPADISPATCHER-start -------------------------------')  
+  helper.einternalLogger.critical('IPADISPATCHER-start -------------------------------')
   try:
       cfg_Actions = configuration["LocalActions"]
       helper.internalLogger.debug("Local actions {0}...".format(cfg_Actions))
@@ -283,25 +290,44 @@ def main(configfile):
       loggingEnd()
       return 0
 
+  global ga
+  global assistant
+  ga=None
+  assistant=None
 
-  try:
+
+  if "gasdk" in configuration:
+   try:    
+    import google.oauth2.credentials
+    from google.assistant.library import Assistant
+    from google.assistant.library.event import EventType
+    from google.assistant.library.file_helpers import existing_file
+    ga=Ga()
     fcredentials=configuration["gasdk"]["credentials"]
     device_model_id=configuration["gasdk"]["device_model_id"]
-
     helper.internalLogger.debug("Credentials file:{0}, device model id: {1}.".format(fcredentials,device_model_id))
     with open(fcredentials, 'r') as f:
          credentials = google.oauth2.credentials.Credentials(token=None,
-                                                            **json.load(f))  
-    playSound("boot")     
+                                                            **json.load(f)) 
+   except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.warning('Error: Exception creating gasdk handler.')
+    helper.einternalLogger.exception(e)  
+    helper.internalLogger.debug('IPADISPATCHER-General exeception captured. See Log:{0}',format(cfg_log_exceptions))        
 
 
-    helper.internalLogger.debug("Calling amazing Google Assistant...")
+  playSound("boot")     
+
+  apiRestTask=threading.Thread(target=apirest_task,args=(assistant,ga,),name="theOtherTrigger")
+  apiRestTask.daemon = True
+  apiRestTask.start()
+
+  if "gasdk" in configuration and not assistant == None:
+   try: 
     with Assistant(credentials,device_model_id) as assistant:
       ### Now let's run in background alternative ways to 'ok google' speech
       helper.internalLogger.debug("Google grant this credentials. Cool. Going on...")
-      apiRestTask=threading.Thread(target=apirest_task,args=(assistant,ga,),name="theOtherTrigger")
-      apiRestTask.daemon = True
-      apiRestTask.start()
+
       level=None
       for event in assistant.start():
             nextStep,nextLevel=process_event(cfg_Actions,event,ga,level)
@@ -314,15 +340,24 @@ def main(configfile):
                 assistant.start_conversation()
             #else: # none or other
             #    helper.internalLogger.debug('Waiting next event')
-
-
-  except Exception as e:
+   except Exception as e:
     e = sys.exc_info()[0]
     helper.internalLogger.critical('Error: Exception unprocessed properly. Exiting')
     helper.einternalLogger.exception(e)  
-    helper.internalLogger.debug('IPAEM-General exeception captured. See Log:{0}',format(cfg_log_exceptions))        
+    helper.internalLogger.debug('IPADISPATCHER-General exeception captured. See Log:{0}',format(cfg_log_exceptions))        
     loggingEnd()
+  else:
+    helper.internalLogger.debug("No integrated asistant. Just local engine ready to be triggered by REST")
+    while(True):
+      time.sleep(1000)
 
+
+ except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.critical('Error: Exception unprocessed properly. Exiting')
+    helper.einternalLogger.exception(e)  
+    helper.internalLogger.debug('IPADISPATCHER-General exeception captured. See Log:{0}',format(cfg_log_exceptions))        
+    loggingEnd()
 
 '''----------------------------------------------------------'''
 '''----------------     apirest_task      -------------------'''
@@ -333,8 +368,8 @@ def apirest_task(assistant,ga):
 '''----------------------------------------------------------'''
 '''----------------       loggingEnd      -------------------'''
 def loggingEnd():      
-  helper.internalLogger.critical('IPAEM-end -----------------------------')        
-  print('IPAEM-end -----------------------------')
+  helper.internalLogger.critical('IPADISPATCHER-end -----------------------------')        
+  print('IPADISPATCHER-end -----------------------------')
 
    
 '''----------------------------------------------------------'''
@@ -346,8 +381,8 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='Intelligent Personal Assistant EM')
     parser.add_argument('--configfile', type=str, required=False,
-                        default='/etc/ipaem/ipaem.conf',
-                        help='Config file for ipaem service')
+                        default='/etc/ipadispatcher/ipadispatcher.conf',
+                        help='Config file for ipadispatcher service')
     return parser.parse_args()
 
 '''----------------------------------------------------------'''
