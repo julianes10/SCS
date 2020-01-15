@@ -248,6 +248,7 @@ class ServoTrack:
 '''----------------------------------------------------------'''
 class ServoHandler:
   def __init__(self,cfg):
+   try:
     self.pwm=None
 
     if amIaPi():
@@ -262,12 +263,22 @@ class ServoHandler:
         self.setPan(cfg["initPan"])
       if "initTilt" in cfg:
         self.setTilt(cfg["initTilt"])
+   except Exception as e:
+      helper.internalLogger.warning("Motor CAM is not in good shape...")
+      helper.einternalLogger.exception(e)
+
 
   def end(self):
+   try:
     self.stopDriver()
+   except Exception as e:
+      helper.internalLogger.warning("Motor CAM is not in good shape...")
+      helper.einternalLogger.exception(e)
+
 
 
   def restartDriver(self):
+   try:
     if amIaPi():
       import RPi.GPIO as GPIO
       from PCA9685 import PCA9685
@@ -275,12 +286,20 @@ class ServoHandler:
       self.pwm.setPWMFreq(50)
     else:
       helper.internalLogger.debug("Not running in pi. Not init servo")
+   except Exception as e:
+      helper.internalLogger.warning("Motor CAM is not in good shape...")
+      helper.einternalLogger.exception(e)
+
 
   def stopDriver(self):
+   try:
     if amIaPi():
       helper.internalLogger.debug("Servo end...")   
       self.pwm.exit_PCA9685()
     self.pwm=None
+   except Exception as e:
+      helper.internalLogger.warning("Motor CAM is not in good shape...")
+      helper.einternalLogger.exception(e)
   
   def setDeltaPan(self,delta):
     helper.internalLogger.debug("setDeltaPan...{0}".format(delta))   
@@ -302,6 +321,7 @@ class ServoHandler:
 
 
   def setPan(self,value):
+   try:
     helper.internalLogger.debug("setPan...{0}".format(value))   
     self.pan = int(value)
     if amIaPi():
@@ -309,9 +329,14 @@ class ServoHandler:
         self.restartDriver()
       self.pwm.setRotationAngle(1,int(value))
       #self.stopDriver()
+   except Exception as e:
+      helper.internalLogger.warning("Motor CAM is not in good shape...")
+      helper.einternalLogger.exception(e)
+
 
 
   def setTilt(self,value):
+   try:
     helper.internalLogger.debug("setTilt...{0}".format(value))   
     self.tilt = int(value)
     if amIaPi():
@@ -319,6 +344,9 @@ class ServoHandler:
         self.restartDriver()
       self.pwm.setRotationAngle(0,int(value))
       #self.stopDriver()
+   except Exception as e:
+      helper.internalLogger.warning("Motor CAM is not in good shape...")
+      helper.einternalLogger.exception(e)
 
 
   def startTrack(self,data):
