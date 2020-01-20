@@ -29,7 +29,7 @@ def amIaPi():
 
 def getResultCommand(cmd):
     rt=False
-    internalLogger.debug("Executing shell cmd:{0}...".format(cmd))
+    #internalLogger.debug("Executing shell cmd:{0}...".format(cmd))
     try:
       result=subprocess.check_output(cmd, shell=True)
       rt=True
@@ -39,7 +39,7 @@ def getResultCommand(cmd):
 
 def getOutputCommand(cmd,default):
     rt=default
-    internalLogger.debug("Executing shell cmd:{0}...".format(cmd))
+    #internalLogger.debug("Executing shell cmd:{0}...".format(cmd))
     try:
       result=subprocess.check_output(cmd, shell=True)
       rt=result.decode().rstrip()

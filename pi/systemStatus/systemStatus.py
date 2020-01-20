@@ -50,6 +50,7 @@ class NetworkMonitor:
     self.ipWan="unknown"
     self.ipv6Wan="unknown"
     self.defaultInterfaceRoute="unknown"
+    self.defaultRoute="unknown"
     self.wlans=[]
     self.totalConnectedSuccess=0
     self.totalConnectedFails=0
@@ -59,6 +60,8 @@ class NetworkMonitor:
     self.preferredESSIDs=getOutputCommand(cmd,"unknown")
     self.wlanOn=False
     self.wanOn=False
+
+    self.dnsServers=self.getDnsServers()
 
 
   #--------------------------------------------
@@ -73,6 +76,7 @@ class NetworkMonitor:
     self.getAvailableWlans()
     self.getActiveInterfacesIp()
     self.updateDefaultRoute()
+    self.dnsServers=self.getDnsServers()
 
     if self.connected==True:
       self.totalConnectedSuccess=self.totalConnectedSuccess+1
@@ -120,12 +124,18 @@ class NetworkMonitor:
     cmd="iwlist " + GLB_configuration["netMonitor"]["wlanInterface"] + " scanning | grep -i SSID | cut -d ':' -f2 | sed 's/\"//g'"
     aux=getOutputCommand(cmd," ")
     self.wlans=aux.split()
+    helper.internalLogger.debug("Getting available wlan: {0}".format(self.wlans))
 
   #--------------------------------------------
   def getDefaultRoute(self):
     cmd="ip r | grep default | sed -n -e 's/^.*dev //p' | cut -d ' ' -f1"
-    helper.internalLogger.debug("Getting default route...")
+    helper.internalLogger.debug("Getting default route interface...")
     self.defaultInterfaceRoute=getOutputCommand(cmd,"unknown")
+    helper.internalLogger.debug("Getting default route interface: {0}".format(self.defaultInterfaceRoute))
+    cmd="ip r | grep default"
+    helper.internalLogger.debug("Getting default route...")
+    self.defaultRoute=getOutputCommand(cmd,"unknown")
+    helper.internalLogger.debug("Getting default route: {0}".format(self.defaultRoute))
 
   #--------------------------------------------
   def getActiveInterfacesIp(self):
@@ -137,8 +147,6 @@ class NetworkMonitor:
       self.ipv6Wlan   =self.getIp("inet6 ",GLB_configuration["netMonitor"]["wlanInterface"])
     self.wlanOn = (self.ipWlan != None and self.ipWlan != "unknown" and self.ipWlan!= "") or (self.ipv6Wlan != None and self.ipv6Wlan != "unknown" and self.ipv6Wlan!= "")
     self.wanOn = (self.ipWan != None and self.ipWan != "unknown" and self.ipWan!= "") or (self.ipv6Wan != None and self.ipv6Wan != "unknown" and self.ipv6Wan!= "")
- 
-
 
 
   #--------------------------------------------
@@ -147,50 +155,69 @@ class NetworkMonitor:
     return getOutputCommand(cmd,"unknown")
 
   #--------------------------------------------
+  def getDnsServers(self):
+    cmd="cat /etc/resolv.conf | grep 'nameserver' | sed 's/nameserver //g'"
+    return getOutputCommand(cmd,"unknown")
+  #--------------------------------------------
   def updateDefaultRoute(self):
+
     self.getDefaultRoute()
-    if not "favoriteDefaultRoute" in GLB_configuration["netMonitor"]:
+    if not "favoriteInterfaceDefaultRoute" in GLB_configuration["netMonitor"]:
+      helper.internalLogger.debug("No favoriteInterfaceDefaultRoute in config. Nothing to update")
       return
-    if GLB_configuration["netMonitor"]["favoriteDefaultRoute"] == self.defaultInterfaceRoute:
-      return
-      
+    helper.internalLogger.debug("Checking default route in favourites: {0}".format(GLB_configuration["netMonitor"]["favoriteInterfaceDefaultRoute"]))
+
+    dftWAN=False      
     iface2useInRoute=""
-    if GLB_configuration["netMonitor"]["favoriteDefaultRoute"] == GLB_configuration["netMonitor"]["wlanInterface"]: 
+    if GLB_configuration["netMonitor"]["favoriteInterfaceDefaultRoute"] == GLB_configuration["netMonitor"]["wlanInterface"]: 
       if self.wlanOn:
           iface2useInRoute=GLB_configuration["netMonitor"]["wlanInterface"]
           helper.internalLogger.debug("Route prefered wlan and it is on")
       else:
         if self.wanOn:
           iface2useInRoute=GLB_configuration["netMonitor"]["wanInterface"]
+          dftWAN=True      
           helper.internalLogger.debug("Route prefered wlan but it is not on and wan yes")
         else:
+          helper.internalLogger.debug("None interface ON, no route to set")
           return
 
-    if GLB_configuration["netMonitor"]["favoriteDefaultRoute"] == GLB_configuration["netMonitor"]["wanInterface"]: 
+    if GLB_configuration["netMonitor"]["favoriteInterfaceDefaultRoute"] == GLB_configuration["netMonitor"]["wanInterface"]: 
       if self.wanOn:
           iface2useInRoute=GLB_configuration["netMonitor"]["wanInterface"]
           helper.internalLogger.debug("Route prefered wan and it is on")
+          dftWAN=True      
       else:
         if self.wlanOn:
           iface2useInRoute=GLB_configuration["netMonitor"]["wlanInterface"]
           helper.internalLogger.debug("Route prefered wan but it is not on and wlan yes")
         else:
+          helper.internalLogger.debug("None interface ON, no route to set")
           return    
+
     if (iface2useInRoute ==""):
+      helper.internalLogger.debug("No interface ON, no route to setup.")
       return
     if iface2useInRoute == self.defaultInterfaceRoute:
-      helper.internalLogger.debug("Route prefered is already the default one.")
+      helper.internalLogger.debug("Route to us is already setup: {0}.".format(iface2useInRoute))
       return
 
-    helper.internalLogger.debug("Lets try to add NEW default route...")
-    # delete current default route
-    cmd="ip r del default"
-    getResultCommand(cmd)
 
-    # add new default route
-    cmd="ip r add default dev " + iface2useInRoute
-    if getResultCommand(cmd):
-      self.defaultInterfaceRoute=iface2useInRoute
+    helper.internalLogger.debug("ROUTES HAS TO BE CHANGED.")
+    helper.internalLogger.debug("SYSTEM WILL TAKE ABOUT WLAN. WAN IS FIXED HERE.")
+    #ONLY WAN IS THE PROBLE, WLAN PUTS ON/OFF OK
+    if not dftWAN:
+      helper.internalLogger.debug("Lets try to add delete useless default route...")
+      # delete current default route
+      cmd="ip r del default dev " + GLB_configuration["netMonitor"]["wanInterface"]
+      getResultCommand(cmd)
+
+    if dftWAN:
+      helper.internalLogger.debug("Lets try to add NEW default route...")
+      cmd="ip r add default dev " + GLB_configuration["netMonitor"]["wanInterface"]
+      if getResultCommand(cmd):
+        self.defaultInterfaceRoute=iface2useInRoute
+
 
   def toDict(self):
     rt={}
@@ -204,6 +231,7 @@ class NetworkMonitor:
     rt['ipv6Wan'] = self.ipv6Wan
 
     rt['defaultInterfaceRoute'] = self.defaultInterfaceRoute
+    rt['defaultRoute'] = self.defaultRoute
     rt['wlans'] = self.wlans
     rt['connectedWlan']=self.connectedWlan
     rt['preferredESSIDs']=self.preferredESSIDs
@@ -213,6 +241,7 @@ class NetworkMonitor:
 
     rt['wlanOn']=self.wlanOn
     rt['wanOn']=self.wanOn
+    rt['dnsServers']=self.dnsServers
 
     return rt
 

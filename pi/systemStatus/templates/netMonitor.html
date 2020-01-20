@@ -16,9 +16,13 @@
    <tr><th align="right" rowspan="3">Connected WAN</th><td rowspan="3">{{st.netMonitor.wanOn}}</td></tr>
      <tr><th align="right">ipv4</th><td >{{st.netMonitor.ipWan}}</td>
      <tr><th align="right">ipv6</th><td>{{st.netMonitor.ipv6Wan}}</td></tr>
-   <tr><th align="right">Default Route</th><td colspan="3">{{st.netMonitor.defaultInterfaceRoute}}</td></tr>
+   <tr><th align="right">Default Route</th>
+     <td colspan="1">{{st.netMonitor.defaultInterfaceRoute}}</td>
+     <td colspan="2">{{st.netMonitor.defaultRoute}}</td></tr>
    <tr><th align="right">ESSID connected (using {{st.netMonitor.configuration.wlanInterface}})</th><td colspan="3">{{st.netMonitor.connectedWlan}}</td></tr>
    <tr><th align="right">Available ESSIDs</th><td colspan="3">{{st.netMonitor.wlans}}</td></tr>
+   <tr><th align="right">DNS servers</th><td colspan="3">{{st.netMonitor.dnsServers}}</td></tr>
+
 </table>
 <br>
 {% if st.netMonitor.configuration %}
@@ -30,7 +34,7 @@
    <tr><th align="right">Favorite ESSIDs</th><td>{{st.netMonitor.preferredESSIDs}}</td></tr>
 </table>
 {% endif %}
-{{st.netMonitor}}
+<!-- DEBUG {{st.netMonitor}} -->
 {% else %}
 No services info is available
 {% endif %}

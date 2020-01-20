@@ -20,7 +20,7 @@
       "favoriteWlan":"urban",
       "wlanInterface":"wlan0",
       "wanInterface":"ppp0",
-      "favoriteDefaultRoute":"ppp0"
+      "favoriteInterfaceDefaultRoute":"ppp0"
   }
 }
 
