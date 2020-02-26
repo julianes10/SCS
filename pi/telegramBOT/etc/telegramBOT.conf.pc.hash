@@ -6,7 +6,6 @@
   "host":"0.0.0.0",
   "ongoingDB":"/tmp/telegramBOT.ongoing",
   "ongoingDBNV":"/tmp/telegramBOT.ongoingNV",
-
   "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run","mem","status"],
   "pollingTimeout" : 10,
   "actions" : { 
