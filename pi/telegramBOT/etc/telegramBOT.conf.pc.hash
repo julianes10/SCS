@@ -17,6 +17,8 @@
     "uptime"  : { "cmd" : "uptime"},
     "test"  : { "cmd" : "echo hola-esto-es-un-test", "hidden":false},
     "mem"  : { "cmd" : "free -h"},
+    "rxfoto" : { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayImageFullScreenHTML.sh", "include-message-args":true},
+    "rxvideo" : { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayVideoFullScreenHTML.sh", "include-message-args":true},
     "run"  : { "cmd" : "TELEGRAM_COMMAND","hidden":true},
     "status": { "cmd" : "wkhtmltoimage localhost:5061 /tmp/status.jpg >/dev/null", "image":"/tmp/status.jpg","hidden":true}
   },
@@ -32,6 +34,8 @@
     { "name": "pepito3","action" : "fotoHD"},
     { "name": "pepito4","action" : "foto"}
   ],
-  "eventBOOT": [{"name":"pepito4"},{"name":"pepito1"}]
+  "eventBOOT": [{"name":"pepito4"},{"name":"pepito1"}],
+  "media-photo" : { "action" : "rxfoto", "basePath" : "/tmp/telegramMedia/photo"},
+  "media-video" : { "action" : "rxvideo", "basePath" : "/tmp/telegramMedia/video"}
 }
 

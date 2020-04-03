@@ -600,6 +600,67 @@ def isValidItem(msg,l,key):
         rt=True
   return rt
 
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+def processPhotoMessage(message):
+
+  now=time.time()
+  try:
+   helper.internalLogger.debug("message.photo:{0}".format(message.photo))
+   fileID = message.photo[-1].file_id
+   file = bot.get_file(fileID)
+   downloaded_file = bot.download_file(file.file_path)
+   pathFile=GLB_configuration["media-photo"]["basePath"]+"/"+str(now)+".jpg"
+   #helper.internalLogger.debug("file info:{0} {1} {2}".format(file.file_path,downloaded_file,pathFile))
+   helper.internalLogger.debug("Dumping photo in :{0}".format(pathFile))
+   with open(pathFile, 'wb') as new_file:
+         new_file.write(downloaded_file)
+   item=GLB_configuration["actions"][GLB_configuration["media-photo"]["action"]]
+   result=runAction(item,"photo "+pathFile)
+   if result is None:
+     bot.send_message(message.chat.id,'Error: Exception executing {0}'.format(key))
+     bot.reply_to(message, "Ignoring this request.")
+   else:
+     sendActionResult(message.chat.id,item,result)    
+
+  except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.critical('Error in processPhotoMessage')
+    helper.einternalLogger.exception(e)  
+
+
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+def processVideoMessage(message):
+  now=time.time()
+  try:
+   helper.internalLogger.debug("message.video:{0}".format(message.video))
+   fileID = message.video.file_id
+   file = bot.get_file(fileID)
+   downloaded_file = bot.download_file(file.file_path)
+   pathFile=GLB_configuration["media-video"]["basePath"]+"/"+str(now)+".mp4"
+   #helper.internalLogger.debug("file info:{0} {1} {2}".format(file.file_path,downloaded_file,pathFile))
+   helper.internalLogger.debug("Dumping video in :{0}".format(pathFile))
+   with open(pathFile, 'wb') as new_file:
+         new_file.write(downloaded_file)
+   item=GLB_configuration["actions"][GLB_configuration["media-video"]["action"]]
+   result=runAction(item,"video "+pathFile)
+   if result is None:
+     bot.send_message(message.chat.id,'Error: Exception executing {0}'.format(key))
+     bot.reply_to(message, "Ignoring this request.")
+   else:
+     sendActionResult(message.chat.id,item,result)    
+
+  except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.critical('Error in processVideoMessage')
+    helper.einternalLogger.exception(e)  
 
 
 '''----------------------------------------------------------'''
@@ -632,6 +693,14 @@ def main(configfile):
   helper.einternalLogger.critical('telegramBOT-start -------------------------------')
 
 
+  try:
+    #Create local path
+    os.makedirs(GLB_configuration["media-photo"]["basePath"])
+    os.makedirs(GLB_configuration["media-video"]["basePath"])
+  except:
+    pass
+
+
   recoverOngoingTasks()
 
   try:    
@@ -655,6 +724,13 @@ def main(configfile):
     eventBootTask.daemon = True
     eventBootTask.start()
 
+    @bot.message_handler(content_types=['photo'])
+    def photo(message):
+      processPhotoMessage(message)
+
+    @bot.message_handler(content_types=['video'])
+    def video(message):
+      processVideoMessage(message)
 
     @bot.message_handler(func=lambda message: True)
     def process_all(message):
