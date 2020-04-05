@@ -244,7 +244,10 @@ def sendImageToSubscriber(chatid, path):
   if os.path.isfile(path):
     helper.internalLogger.debug("File: {0}".format(path))
     f = open(path, 'rb')
-    bot.send_photo(chatid, f)
+    if path[-4:] == ".gif":
+      bot.send_document(chatid, f)
+    else:
+      bot.send_photo(chatid, f)
     f.close()
   else: 
     bot.send_message(chatid,"No image available, sorry")
@@ -314,6 +317,20 @@ def runAction(action,originalMsg):
         cmd=action["cmd"] + ' '+' '.join(msgSplitted[1:])
   
     global bot
+    bg=False
+    if "background" in action:
+      if action["background"]:
+        bg=True
+
+
+    if bg:
+        helper.internalLogger.debug("Executing in bg Cmd {0}...".format(cmd))
+        subprocess.Popen(['bash','-c',cmd])
+        helper.internalLogger.debug("Just. Executed {0} ".format(cmd))
+        return "Action Executed in background"
+    
+    #else blocking & checking output
+    helper.internalLogger.debug("Executing bloking Cmd {0}...".format(cmd))
     result=subprocess.check_output(['bash','-c',cmd])
     helper.internalLogger.debug("Cmd {0}, result {1}".format(cmd,result))
     rt=result
