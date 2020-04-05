@@ -181,5 +181,5 @@ if [ $ARGslideshow ]; then
   manageTimeout $ARGtimeoutSlideShow
 fi
 
-unclutter &
+#unclutter &
 exit 0
