@@ -7,10 +7,14 @@
 
   "ongoingDB":"/tmp/telegramBOT.ongoing",
   "ongoingDBNV":"/tmp/telegramBOT.ongoingNV",
-  "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run","mem","status","cleanphotos","getss","noss","showss"],
+  "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run","mem","status","video-sample",
+            "cleanphotos","getss"   ,"noss"   ,"showss",
+            "cleanvideos","getvs"   ,"novs"   ,"showvs",
+            "cleanmedia" ,"getmedia","nomedia","showmedia"],
   "pollingTimeout" : 10,
   "actions" : { 
     "foto"  : { "cmd" : "fswebcam -r  400x300 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
+    "video-sample"  : { "cmd" : "echo Here it is the video sample", "video": "/tmp/file.mp4"},
     "fotoHD": { "cmd" : "fswebcam -r  1280x720 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
     "fotoFHD": { "cmd" : "fswebcam -r 1920×1080  --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
     "foto2K": { "cmd" : "fswebcam -r  2048x1080  --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
@@ -18,12 +22,24 @@
     "uptime"  : { "cmd" : "uptime"},
     "test"  : { "cmd" : "echo hola-esto-es-un-test", "hidden":false},
     "mem"  : { "cmd" : "free -h"},
-    "rxfoto" : { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayImageFullScreenHTML.sh -t 20 -i -s -u", "include-message-args":true,"background":true},
-    "cleanphotos"  : { "cmd" : "rm -rf /tmp/telegramMedia/photo/*"},
-    "getss" : { "cmd" : "echo Current slide show:","image": "/tmp/image.gif"},
-    "showss"  : { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayImageFullScreenHTML.sh -s -u /home/pi/telegramMedia/photo", "background": true},
-    "noss"  : { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayImageFullScreenHTML.sh"},
-    "rxvideo" : { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayVideoFullScreenHTML.sh", "include-message-args":true},
+    "rxfoto" : { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayMedia.sh -t 20 -i -s -u", "include-message-args":true,"background":true},
+
+    "cleanphotos"  :  { "cmd" : "rm -rf /tmp/telegramMedia/photo/*"},
+    "getss" :         { "cmd" : "echo Current slide show:","image": "/tmp/image.gif"},
+    "noss"  :         { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayMedia.sh"},
+    "showss"  :       { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayMedia.sh -s -u /tmp/telegramMedia/photo", "background": true},
+
+    "cleanvideo"  :   { "cmd" : "rm -rf /tmp/telegramMedia/video/*"},
+    "getvs" :         { "cmd" : "echo Current video show TODO:","image": "/tmp/image.gif"},
+    "novs"  :         { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayMedia.sh"},
+    "showvs"  :       { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayMedia.sh -w -r 5 -u /tmp/telegramMedia/photo/*/telegramMedia/video", "background": true},
+
+    "cleanmedia"  :   { "cmd" : "rm -rf /tmp/telegramMedia/photo/* /tmp/telegramMedia/video/*"},
+    "getmedia" :      { "cmd" : "echo Current slide show and video show TODO:","image": "/tmp/image.gif"},
+    "nomedia"  :      { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayMedia.sh"},
+    "showmedia"  :    { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayMedia.sh -m -u  /tmp/telegramMedia/ -r 1 -n -x 60", "background": true},
+
+    "rxvideo" : { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayMedia.sh -v -r 2 -u ", "include-message-args":true,"background": true},
     "run"  : { "cmd" : "TELEGRAM_COMMAND","hidden":true},
     "status": { "cmd" : "wkhtmltoimage localhost:5061 /tmp/status.jpg >/dev/null", "image":"/tmp/status.jpg","hidden":true}
   },
