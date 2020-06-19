@@ -23,6 +23,10 @@ case $key in
     ARGimage=true
     shift # past value
     ;;
+    -d|--text)
+    ARGtxt=true
+    shift # past value
+    ;;
     -v|--video)
     ARGvideo=true
     shift # past value
@@ -146,6 +150,31 @@ function prepareHTML() {
   </html>
 EOL
 }
+
+#---------------------------------------------------------
+function prepareHTMLtxt() {
+  txt=$1
+  file=$2
+  cat >$file<<EOL
+  <html>
+   <head>
+    <style>
+     p {
+          font-size: 10vh;
+          font-size: 10vw;
+        }
+    </style>
+   </head>
+  <body style="background-color:lightgreen;">
+  <div>
+    <p>
+      $txt
+  </div>
+  </body>
+  </html>
+EOL
+}
+
 
 
 #---------------------------------------------------------
@@ -283,6 +312,15 @@ function checkIfExit() {
 
 }
 
+
+#---------------------------------------------------------
+function getActiveSourceHDMI() {
+  echo 'as' | cec-client -s -d 1
+}
+
+
+
+
 ##########################################################
 
 
@@ -297,6 +335,16 @@ checkIfExit
 
 
 echo "DEBUG starting the game...."
+getActiveSourceHDMI
+
+if [ $ARGtxt ]; then
+  echo "DEBUG showing a text: $ARGurl ..."
+  prepareHTMLtxt "$ARGurl" /tmp/txt.html
+  renderHTML /tmp/txt.html
+  manageTimeout $ARGtimeout
+fi
+
+
 if [ $ARGimage ]; then
   echo "DEBUG showing an image: $ARGurl ..."
   prepareHTML $ARGurl /tmp/image.html
