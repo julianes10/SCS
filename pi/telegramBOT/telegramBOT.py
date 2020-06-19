@@ -314,6 +314,9 @@ def runAction(action,originalMsg):
         cmd=action["cmd"].replace("TELEGRAM_COMMAND",' '.join(msgSplitted[1:]))
 
     if "include-message-args" in action:
+      if "single-args" in action:
+        cmd=action["cmd"] + "'"+' '.join(msgSplitted[1:])+"'"
+      else:
         cmd=action["cmd"] + ' '+' '.join(msgSplitted[1:])
   
     global bot
