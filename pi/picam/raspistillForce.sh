@@ -1,10 +1,10 @@
 #!/bin/bash 
 relaunch=0
-sudo systemctl status mjpg-streamer.service
+sudo systemctl status mjpg-streamer.service > /dev/null 2>&1
 if [ $? -eq 0 ]
 then
-  echo "Stopping live streaming..."
-  sudo systemctl stop mjpg-streamer.service
+  # echo "Stopping live streaming..."
+  sudo systemctl stop mjpg-streamer.service > /dev/null 2>&1
   relaunch=1
 fi
 
@@ -21,8 +21,8 @@ fi
 
 if [ $relaunch -eq 1 ]
 then
-    echo "Restoring live streaming..."
-    sudo systemctl start mjpg-streamer.service
+    # echo "Restoring live streaming..."
+    sudo systemctl start mjpg-streamer.service > /dev/null 2>&1
 fi
 
 
