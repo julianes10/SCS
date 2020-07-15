@@ -17,7 +17,7 @@
    {% endfor %}
 </table>
 {% else %}
-Periodica actions are not configured. Review configuration and restart telegramBOT service
+Periodic actions are not configured. Review configuration and restart telegramBOT service
 {% endif %}
 {% if status.event %}
 <table>
@@ -36,5 +36,18 @@ Periodica actions are not configured. Review configuration and restart telegramB
 </table>
 {% else %}
 Events are not configured. Review configuration and restart telegramBOT service
+{% endif %}
+{% if status.trusted %}
+<table>
+   <tr><th>Alias</th><th>Id</th></tr>
+   {% for prj in status.trusted %} 
+   <tr>
+    <td>{{prj.alias}}</td>
+    <td>{{prj.id}}</td>
+   </tr>
+   {% endfor %}
+</table>
+{% else %}
+Security settings are not configured. Review configuration and restart telegramBOT service
 {% endif %}
 

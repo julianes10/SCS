@@ -97,6 +97,8 @@ def get_telegramBOT_status():
 def getStatus():
     rt=LOCK()
     UNLOCK(rt)
+    if 'users' in GLB_trusted:
+      rt['trusted']=GLB_trusted['users']
     return rt
 
 
@@ -541,7 +543,7 @@ def addSubscriber(id,tableName,item2subscribe=None):
   
 
 
-
+ 
 
 
 '''----------------------------------------------------------'''
@@ -683,12 +685,108 @@ def processVideoMessage(message):
     helper.einternalLogger.exception(e)  
 
 
+
+'''----------------------------------------------------------'''
+def loadTrusted():
+  rt={}
+  if not "security" in GLB_configuration:
+    return rt
+  if not "trusted" in GLB_configuration["security"]:
+    return rt
+
+  try:
+    with open(GLB_configuration["security"]["trusted"]) as json_data:
+      rt = json.load(json_data)
+
+  except Exception as e:
+      helper.internalLogger.critical("Error opening security: {0}.".format(GLB_configuration["security"]["trusted"]))
+      helper.einternalLogger.exception(e)
+
+
+
+  helper.internalLogger.debug("COMMENT THIS:{0}".format(rt))
+
+  return rt
+
+'''----------------------------------------------------------'''
+def isATrustedUser(id):
+  global GLB_trusted
+
+  if not "security" in GLB_configuration:
+    return True
+  if not "trusted" in GLB_configuration["security"]:
+    return True
+
+
+  try:
+    for i in GLB_trusted["users"]:
+      if i["id"]==id:
+        return True
+  except Exception as e:
+      helper.internalLogger.critical("Error opening security dict: {0}.".format(GLB_configuration["security"]["trusted"]))
+      helper.einternalLogger.exception(e)
+
+  return False
+      
+  
+'''----------------------------------------------------------'''
+def addTrustedUser(id,alias):
+  global GLB_trusted
+
+  if not "users" in GLB_trusted:
+    GLB_trusted["users"]=[]
+
+  item={"id":id, "alias":alias}
+  GLB_trusted["users"].append(item)
+
+  try:
+   with open(GLB_configuration["security"]["trusted"], 'w+') as fp:
+    json.dump(GLB_trusted, fp)
+  except Exception as e:
+      helper.internalLogger.critical("Error writting security: {0}.".format(GLB_configuration["security"]["trusted"]))
+      helper.einternalLogger.exception(e)
+
+
+'''----------------------------------------------------------'''
+def delTrustedUser(id,alias):
+  global GLB_trusted
+  try:
+    for i in GLB_trusted["users"]:
+      if id != 0 and i["id"]==id:
+        GLB_trusted["users"].remove(i)
+        delSubscriber(id,"periodic")
+        delSubscriber(id,"event")
+
+    for i in GLB_trusted["users"]:
+      if alias != None and alias == i['alias']:
+        id_aux=i["id"]
+        GLB_trusted["users"].remove(i)
+        delSubscriber(id_aux,"periodic")
+        delSubscriber(id_aux,"event")           
+
+
+
+
+  except Exception as e:
+      helper.internalLogger.critical("Error deleting specific user at security dict: {0}.".format(GLB_configuration["security"]["trusted"]))
+      helper.einternalLogger.exception(e)
+
+  try:
+   with open(GLB_configuration["security"]["trusted"], 'w+') as fp:
+    json.dump(GLB_trusted, fp)
+  except Exception as e:
+      helper.internalLogger.critical("Error writting security: {0}.".format(GLB_configuration["security"]["trusted"]))
+      helper.einternalLogger.exception(e)
+
+
+
+
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
 '''----------------------------------------------------------'''
-
 def main(configfile):
   print('telegramBOT-start -----------------------------')
+
 
   # Loading config file,
   # Default values
@@ -696,6 +794,7 @@ def main(configfile):
   cfg_log_exceptions="telegramBOTe.log"
 
   global GLB_configuration
+  global GLB_trusted
   # Let's fetch data
   GLB_configuration={}
   with open(configfile) as json_data:
@@ -707,6 +806,9 @@ def main(configfile):
       if "logExceptions" in GLB_configuration["log"]:
         cfg_log_exceptions = GLB_configuration["log"]["logExceptions"]
   helper.init(cfg_log_debugs,cfg_log_exceptions)
+
+  GLB_trusted=loadTrusted()
+
 
   print('See logs debugs in: {0} and exeptions in: {1}-----------'.format(cfg_log_debugs,cfg_log_exceptions))  
   helper.internalLogger.critical('telegramBOT-start -------------------------------')  
@@ -754,6 +856,8 @@ def main(configfile):
 
     @bot.message_handler(func=lambda message: True)
     def process_all(message):
+
+
       start=False
       stop=False
       msgFull=message.text.lower()
@@ -761,6 +865,24 @@ def main(configfile):
       msg=msgList[0]
       if msg[0] == '/':
         msg=msg[1:]  #Trimming char /
+
+
+      # SECURITY FIRST!
+      # Only allow user if it is a trusted one
+      if not isATrustedUser(message.chat.id):
+        bot.send_message(message.chat.id, "Untrusted user")
+        if "magic" in GLB_configuration["security"]:
+          if "magic" == msg:
+            if len(msgList)>2:
+              if GLB_configuration["security"]["magic"] == msgList[1]:
+                addTrustedUser(message.chat.id,msgList[2])
+                bot.send_message(message.chat.id, "Welcome "+ msgList[2])
+                #TODO delTrustedUser(message.chat.id,msgList[2)]
+              else:
+                bot.send_message(message.chat.id, "You don't have the magic")
+            else:
+              bot.send_message(message.chat.id, "An alias is needed")
+        return        
           
       # Some built-ins options
       #-------------------------------------------------------------------
@@ -816,13 +938,19 @@ def main(configfile):
 
 
       if "help" in msg or "helphidden" in msg:
-
         options="On demand menu actions:"
         options=options+"\n-----------------------"
-        for key,item in GLB_configuration["actions"].items():
+        for key,item in sorted(GLB_configuration["actions"].items()):
           if ( (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False)) or ("helphidden" in msg):
             if key in GLB_configuration["menu"]:
               options=options+'\n  '+key
+            if "alias" in item:
+              options=options+"( "
+              for j in range(0, len(item["alias"])):
+                options=options+item["alias"][j]+","
+              options=options+")"
+            if "hint" in item:
+              options=options+ " - " + item["hint"]
 
         options=options+'\n'"start/stop periodic [name] or all:"
         options=options+"\n------------------------------------"
@@ -840,14 +968,48 @@ def main(configfile):
             if "action" in item:
                 options=options+ "  " + item["action"]
 
+        if "helphidden" in msg:
+          options=options+"\n------------------------------------"
+          options=options+'\n'"nomagic [alias]"
+          options=options+'\n'"trusted"
         bot.send_message(message.chat.id,options)
+        return
 
+
+      #-------------------------------------------------------------------
+      #-------------------------------------------------------------------
+      if "nomagic" in msg:
+        if (len(msgList) == 1):
+          bot.send_message(message.chat.id, "Deleting you as trusted user")
+          delTrustedUser(message.chat.id,None)
+        if (len(msgList) == 2):
+          bot.send_message(message.chat.id, "Deleting {0} as trusted user".format(msgList[1]))
+          delTrustedUser(0,msgList[1])  
+        return        
+
+      #-------------------------------------------------------------------
+      #-------------------------------------------------------------------
+      if "trusted" in msg:
+        rt="Trusted user list:"
+        for j in GLB_trusted["users"]:
+          rt=rt+'\n'+j['alias'] + " ("+str(j['id'])+")"
+        bot.send_message(message.chat.id,rt)
+        return
+          
       else:
         # Custom by configuration options
         for key,item in GLB_configuration["actions"].items():
           if key in GLB_configuration["menu"]:
             #helper.internalLogger.debug("Checking key '{0}' and msg {1}".format(key,msg))
+            bingo=False
             if msg == key.lower():
+              bingo=True
+            elif "alias" in item:
+              for j in range(0, len(item["alias"])):
+                if msg == item["alias"][j].lower():
+                  bingo=True
+                  break
+            if bingo:
               helper.internalLogger.debug("Command '{0}' executing...".format(key))
               result=runAction(item,message.text)  
               if result is None:
