@@ -2,6 +2,11 @@
   "log": { "logTraces":"/tmp/telegram.log",
            "logExceptions":"/tmp/telegrame.log"
   },
+  "security": { 
+      "trusted":"/tmp/telegram_users.db",
+      "magic": "whatever",
+      "log":"/tmp/users.log"
+  },
   "port":5061,
   "host":"0.0.0.0",
 
@@ -13,7 +18,7 @@
             "cleanmedia" ,"getmedia","nomedia","showmedia"],
   "pollingTimeout" : 10,
   "actions" : { 
-    "foto"  : { "cmd" : "fswebcam -r  400x300 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
+    "foto"  : { "cmd" : "fswebcam -r  400x300 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img", "alias":["f","photo"],"hint": "Dispara una foto 00x300 "},
     "video-sample"  : { "cmd" : "echo Here it is the video sample", "video": "/tmp/file.mp4"},
     "fotoHD": { "cmd" : "fswebcam -r  1280x720 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
     "fotoFHD": { "cmd" : "fswebcam -r 1920×1080  --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
