@@ -942,15 +942,14 @@ def main(configfile):
         options=options+"\n-----------------------"
         for key,item in sorted(GLB_configuration["actions"].items()):
           if ( (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False)) or ("helphidden" in msg):
-            if key in GLB_configuration["menu"]:
-              options=options+'\n  '+key
+            options=options+'\n * '+key
             if "alias" in item:
-              options=options+"( "
+              options=options+" ( "
               for j in range(0, len(item["alias"])):
                 options=options+item["alias"][j]+","
               options=options+")"
             if "hint" in item:
-              options=options+ " - " + item["hint"]
+              options=options+ "\n      " + item["hint"]
 
         options=options+'\n'"start/stop periodic [name] or all:"
         options=options+"\n------------------------------------"
@@ -999,7 +998,6 @@ def main(configfile):
       else:
         # Custom by configuration options
         for key,item in GLB_configuration["actions"].items():
-          if key in GLB_configuration["menu"]:
             #helper.internalLogger.debug("Checking key '{0}' and msg {1}".format(key,msg))
             bingo=False
             if msg == key.lower():
