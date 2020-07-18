@@ -23,6 +23,61 @@ if [ "$1" == "STOP" ]; then
   exit 0
 fi
 
+#---------------------------------------------------------
+function clickAroundMini() {
+  x=$1
+  y=$2
+  delta=10
+  xdotool mousemove $x $y
+  xdotool click 1
+
+  xx=$((x+d))
+  yy=$((y))
+  xdotool mousemove $xx $yy
+  xdotool click 1
+
+  xx=$((x))
+  yy=$((y+d))
+  xdotool mousemove $xx $yy
+  xdotool click 1
+
+  xx=$((x-d))
+  yy=$((y))
+  xdotool mousemove $xx $yy
+  xdotool click 1
+
+  xx=$((x))
+  yy=$((y-d))
+  xdotool mousemove $xx $yy
+  xdotool click 1
+
+}
+
+#---------------------------------------------------------
+function clickAround() {
+  x=$1
+  y=$2
+  d=40
+
+  clickAroundMini $x $y
+
+  xx=$((x+d))
+  yy=$((y))
+  clickAroundMini $xx $yy
+  xx=$((x))
+  yy=$((y+d))
+  clickAroundMini $xx $yy
+
+  xx=$((x-d))
+  yy=$((y))
+  clickAroundMini $xx $yy
+  xx=$((x))
+  yy=$((y-d))
+  clickAroundMini $xx $yy
+
+}
+#---------------------------------------------------------
+
 
 # Run this script in display 0 - the monitor
 export DISPLAY=:0
@@ -42,8 +97,7 @@ sleep 2
 xdotool key F11
 sleep $tout
 
-xdotool mousemove $x $y
-xdotool click 1
+clickAround $x $y
 
 unclutter &
 
