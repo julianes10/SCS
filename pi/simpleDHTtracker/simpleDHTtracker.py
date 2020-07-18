@@ -166,6 +166,12 @@ def main(configfile):
          with open(x["output"]+".h", "a") as myfile:
           myfile.write(str(h)+" ")      
           myfile.close()
+
+         with open(x["output"], "a") as myfile:
+          ts=int(time.time())
+          myfile.write("\n"+str(ts)+" "+str(t)+" "+str(h))
+          myfile.close()
+
         latestCached.append({'name': x["name"],'temperature':t,'humidity':h})
         time.sleep(configuration["interval"]) 
 
