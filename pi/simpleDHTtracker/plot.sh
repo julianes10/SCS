@@ -105,9 +105,5 @@ if [ "$opt" == "raw" ]; then
 else
   show_ranges
 fi
-display $outputFile &
-
-#gnuplot> set output "printme.png" (output to any filename.png you want)
-#gnuplot> replot
-#gnuplot> set term x11
+# DEBUG display $outputFile &
 
