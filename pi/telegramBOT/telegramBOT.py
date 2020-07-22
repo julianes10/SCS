@@ -772,7 +772,86 @@ def delTrustedUser(id,alias):
       helper.einternalLogger.exception(e)
 
 
+'''----------------------------------------------------------'''
+def getStringHelpAction(key,force):
+  options=""
+  try:
+    item=GLB_configuration["actions"][key]
+    if (  force or
+          (   (not "hidden" in item)  or  
+              ("hidden" in item and item["hidden"] == False) )
+       ):
+      options=options+'\n * '+key
+    if "alias" in item:
+      options=options+" ( "
+      for j in range(0, len(item["alias"])):
+        options=options+item["alias"][j]+","
+      options=options+")"
+    if "hint" in item:
+      options=options+ "\n      " + item["hint"]
 
+  except Exception as e:
+    helper.internalLogger.critical("Error prompting help about key: {0}.".format(key))
+    helper.einternalLogger.exception(e)
+  return options
+
+
+def mayShowHelp(item,msg):
+  if "helphidden" in msg:
+    return True
+  if "hidden" in item:
+    return not item["hidden"]
+  else:
+    return True
+
+def showHelpMedia(what,msg):
+  options=""
+  options=options+"\n   " + what +" : "
+  value="NO" 
+  if (what in GLB_configuration):
+    if mayShowHelp(GLB_configuration[what],msg):
+        value="YES"
+        value=value+getStringHelpAction(GLB_configuration[what]["action"],True)
+  options=options+value
+  return options
+
+
+
+def showHelpEvent(item,msg):
+  options=""
+  if mayShowHelp(item,msg):
+    options=options+'\n'"  " + item["name"]
+    options=options+getStringHelpAction(item["action"],True)
+    if "interval" in item:
+        options=options+'\n'"    Executed each " + str(item["interval"]) + "(s)"
+  return options
+
+
+def showHelpEvents(msg):
+  options=""
+  what="event"
+  if what in GLB_configuration[what]:
+    for item in GLB_configuration[what]:
+      options=options+showHelpEvent(item,msg)
+  return options
+
+def showHelpEventsBOOT(msg):
+  options=""
+  what="event"
+  if what in GLB_configuration[what]:
+    for item in GLB_configuration[what]:
+      options=options+showHelpEvent(GLB_configuration["event"][item["name"]],msg)
+  return options
+
+
+  if what in GLB_configuration:
+    for item in GLB_configuration[what]:
+      if mayShowHelp(item,msg):
+        options=options+'\n'"  " + item["name"]
+        options=options+getStringHelpAction(item["action"],True)
+        if "interval" in item:
+          options=options+'\n'"    Executed each " + str(item["interval"]) + "(s)"
+  return options
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
@@ -834,7 +913,7 @@ def main(configfile):
     @bot.message_handler(content_types=['text','video','document','photo'])
     def process_all(message):
 
-      helper.internalLogger.debug("INBOX - process_all -  {0}".format(message))
+      #ONLY FOR DEBUG helper.internalLogger.debug("INBOX - process_all -  {0}".format(message))
       
       # CONTENT-TYPE CONTROL
       try:
@@ -890,7 +969,7 @@ def main(configfile):
       start=False
       stop=False
           
-      # Some built-ins options
+      # Some builintervalt-ins options
       #-------------------------------------------------------------------
       #-------------------------------------------------------------------
       if "start" == msg:
@@ -944,39 +1023,46 @@ def main(configfile):
 
 
       if "help" in msg or "helphidden" in msg:
-        options="On demand menu actions:"
-        options=options+"\n-----------------------"
+        options=""
+        options=options+"\n-------------------------------"
+        options=options+"\n On demand accepted messages:"
         for key,item in sorted(GLB_configuration["actions"].items()):
-          if ( (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False)) or ("helphidden" in msg):
-            options=options+'\n * '+key
-            if "alias" in item:
-              options=options+" ( "
-              for j in range(0, len(item["alias"])):
-                options=options+item["alias"][j]+","
-              options=options+")"
-            if "hint" in item:
-              options=options+ "\n      " + item["hint"]
+          options=options+getStringHelpAction(key,"helphidden" in msg)
 
-        options=options+'\n'"start/stop periodic [name] or all:"
-        options=options+"\n------------------------------------"
+       
+        options=options+"\n-------------------------------"
+        options=options+'\n'" How to subscribe to periodic actions:"
+        options=options+'\n'" * start/stop periodic [name] or all"
+        options=options+'\n'"   Available [names]:"
         for item in GLB_configuration["periodic"]:
-          if ( (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False)) or ("helphidden" in msg):
-            options=options+'\n'"  " + item["action"]+ ". Each " + str(item["interval"]) + "(s)"
-            if "start" in item:
-              options=options+ ". Since " + item["start"]
+          if mayShowHelp(item,msg):
+              options=options+getStringHelpAction(item["action"],True)
+              options=options+'\n'"    Executed each " + str(item["interval"]) + "(s)"
+              if "start" in item:
+                options=options+ ". Since " + item["start"]
 
-        options=options+'\n'"start/stop event [name] or all:"
-        options=options+"\n------------------------------------"
-        for item in GLB_configuration["event"]:
-          if ( (not "hidden" in item)  or  ("hidden" in item and item["hidden"] == False)) or ("helphidden" in msg):
-            options=options+'\n'"  " + item["name"]
-            if "action" in item:
-                options=options+ "  " + item["action"]
+        options=options+"\n-------------------------------"
+        options=options+'\n'" How to subscribe to sporadic events:"
+        options=options+'\n'" * start/stop event [name] or all:"
+        options=options+'\n'"   Available [names]:"
+        options=options+showHelpEvents(msg)
+        options=options+'\n'"   Available on boot events [names]:"
+        options=options+showHelpEventsBOOT(msg)
+
+        options=options+"\n-------------------------------"
+        options=options+'\n'"Accepted media attachements:"
+        options=options+showHelpMedia("media-photo",msg)
+        options=options+showHelpMedia("media-video",msg)    
+        options=options+showHelpMedia("media-document",msg)        
 
         if "helphidden" in msg:
-          options=options+"\n------------------------------------"
+          options=options+"\n-------BUILT IN COMMANDS--------------------------"
           options=options+'\n'"nomagic [alias]"
           options=options+'\n'"trusted"
+          options=options+'\n'"help"
+          options=options+'\n'"helphidden"
+          options=options+"\n------------------------------------"
+
         bot.send_message(message.chat.id,options)
         return
 
