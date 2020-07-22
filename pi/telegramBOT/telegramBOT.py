@@ -622,66 +622,59 @@ def isValidItem(msg,l,key):
         rt=True
   return rt
 
-'''----------------------------------------------------------'''
-'''----------------------------------------------------------'''
-'''----------------------------------------------------------'''
-'''----------------------------------------------------------'''
-'''----------------------------------------------------------'''
-def processPhotoMessage(message):
 
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+'''----------------------------------------------------------'''
+def processMediaMessage(message):
   now=time.time()
   try:
-   helper.internalLogger.debug("message.photo:{0}".format(message.photo))
-   fileID = message.photo[-1].file_id
+   helper.internalLogger.debug("message.content_type:{0}".format(message.content_type))
+   if message.content_type == 'video':
+     fileID = message.video.file_id
+     pathFile=GLB_configuration["media-video"]["basePath"]+"/"+str(now)+".mp4"
+     actionHook=GLB_configuration["actions"][GLB_configuration["media-video"]["action"]]
+     try:
+       os.makedirs(GLB_configuration["media-video"]["basePath"])
+     except:
+       pass
+   elif message.content_type == 'photo':
+     fileID = message.photo[-1].file_id
+     pathFile=GLB_configuration["media-photo"]["basePath"]+"/"+str(now)+".jpg"  
+     actionHook=GLB_configuration["actions"][GLB_configuration["media-photo"]["action"]]     
+     try:
+       os.makedirs(GLB_configuration["media-photo"]["basePath"])
+     except:
+       pass
+   elif message.content_type == 'document':
+     fileID = message.document.file_id
+     pathFile=GLB_configuration["media-document"]["basePath"]+"/"+message.document.file_name
+     actionHook=GLB_configuration["actions"][GLB_configuration["media-document"]["action"]]
+     try:
+       os.makedirs(GLB_configuration["media-document"]["basePath"])
+     except:
+       pass
+   else:
+     helper.internalLogger.debug("Unsupported content type")
+     return
+
    file = bot.get_file(fileID)
    downloaded_file = bot.download_file(file.file_path)
-   pathFile=GLB_configuration["media-photo"]["basePath"]+"/"+str(now)+".jpg"
-   #helper.internalLogger.debug("file info:{0} {1} {2}".format(file.file_path,downloaded_file,pathFile))
-   helper.internalLogger.debug("Dumping photo in :{0}".format(pathFile))
+   helper.internalLogger.debug("Dumping media in :{0}".format(pathFile))
    with open(pathFile, 'wb') as new_file:
          new_file.write(downloaded_file)
-   item=GLB_configuration["actions"][GLB_configuration["media-photo"]["action"]]
-   result=runAction(item,"photo "+pathFile)
+   result=runAction(actionHook,"video "+pathFile)
    if result is None:
      bot.send_message(message.chat.id,'Error: Exception executing {0}'.format(key))
      bot.reply_to(message, "Ignoring this request.")
    else:
-     sendActionResult(message.chat.id,item,result)    
+     sendActionResult(message.chat.id,actionHook,result)    
 
   except Exception as e:
     e = sys.exc_info()[0]
-    helper.internalLogger.critical('Error in processPhotoMessage')
-    helper.einternalLogger.exception(e)  
-
-
-'''----------------------------------------------------------'''
-'''----------------------------------------------------------'''
-'''----------------------------------------------------------'''
-'''----------------------------------------------------------'''
-'''----------------------------------------------------------'''
-def processVideoMessage(message):
-  now=time.time()
-  try:
-   helper.internalLogger.debug("message.video:{0}".format(message.video))
-   fileID = message.video.file_id
-   file = bot.get_file(fileID)
-   downloaded_file = bot.download_file(file.file_path)
-   pathFile=GLB_configuration["media-video"]["basePath"]+"/"+str(now)+".mp4"
-   #helper.internalLogger.debug("file info:{0} {1} {2}".format(file.file_path,downloaded_file,pathFile))
-   helper.internalLogger.debug("Dumping video in :{0}".format(pathFile))
-   with open(pathFile, 'wb') as new_file:
-         new_file.write(downloaded_file)
-   item=GLB_configuration["actions"][GLB_configuration["media-video"]["action"]]
-   result=runAction(item,"video "+pathFile)
-   if result is None:
-     bot.send_message(message.chat.id,'Error: Exception executing {0}'.format(key))
-     bot.reply_to(message, "Ignoring this request.")
-   else:
-     sendActionResult(message.chat.id,item,result)    
-
-  except Exception as e:
-    e = sys.exc_info()[0]
-    helper.internalLogger.critical('Error in processVideoMessage')
+    helper.internalLogger.critical('Error in processMediaMessage')
     helper.einternalLogger.exception(e)  
 
 
@@ -815,14 +808,6 @@ def main(configfile):
   helper.einternalLogger.critical('telegramBOT-start -------------------------------')
 
 
-  try:
-    #Create local path
-    os.makedirs(GLB_configuration["media-photo"]["basePath"])
-    os.makedirs(GLB_configuration["media-video"]["basePath"])
-  except:
-    pass
-
-
   recoverOngoingTasks()
 
   try:    
@@ -846,26 +831,39 @@ def main(configfile):
     eventBootTask.daemon = True
     eventBootTask.start()
 
-    @bot.message_handler(content_types=['photo'])
-    def photo(message):
-      processPhotoMessage(message)
-
-    @bot.message_handler(content_types=['video'])
-    def video(message):
-      processVideoMessage(message)
-
-    @bot.message_handler(func=lambda message: True)
+    @bot.message_handler(content_types=['text','video','document','photo'])
     def process_all(message):
 
+      helper.internalLogger.debug("INBOX - process_all -  {0}".format(message))
+      
+      # CONTENT-TYPE CONTROL
+      try:
+        #Let's process only content-types accepted
+        if (message.content_type == 'text' or
+           (message.content_type == 'video'    and "media-video" in GLB_configuration) or
+           (message.content_type == 'photo'    and "media-photo" in GLB_configuration) or
+           (message.content_type == 'document' and "media-document" in GLB_configuration)):
+          helper.internalLogger.debug("INBOX - Processing {0} message from {1}".format(message.content_type,message.from_user.username))
+        else:
+          helper.internalLogger.debug("INBOX - Skipping {0} message from {1}".format(message.content_type,message.from_user.username))
+          bot.send_message(message.chat.id, "Content not allowed")
+      except Exception as e:
+        helper.internalLogger.critical("Error trying to get content-type of the message, ignoring it: {0}.".format(message))
+        helper.einternalLogger.exception(e)
+        return
+     
 
-      start=False
-      stop=False
-      msgFull=message.text.lower()
-      msgList=msgFull.split()
-      msg=msgList[0]
-      if msg[0] == '/':
-        msg=msg[1:]  #Trimming char /
-
+      try:   #It will raise a non-critical exception in no text actions
+        msgFull=message.text.lower()
+        msgList=msgFull.split()
+        msg=msgList[0]
+        if msg[0] == '/':
+          msg=msg[1:]  #Trimming char /
+      except Exception as e:
+        msgFull="NO-MESSAGE-TEXT"
+        msgList=["NO-MESSAGE-TEXT"]
+        msg="NO-MESSAGE-TEXT"
+        
 
       # SECURITY FIRST!
       # Only allow user if it is a trusted one
@@ -883,6 +881,14 @@ def main(configfile):
             else:
               bot.send_message(message.chat.id, "An alias is needed")
         return        
+
+      # PROPER PROCESS REGARDS THE CONTENT_TYPE
+      if (message.content_type != 'text'):
+        processMediaMessage(message)
+        return
+
+      start=False
+      stop=False
           
       # Some built-ins options
       #-------------------------------------------------------------------
