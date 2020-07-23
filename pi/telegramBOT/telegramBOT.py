@@ -781,7 +781,7 @@ def getStringHelpAction(key,force):
           (   (not "hidden" in item)  or  
               ("hidden" in item and item["hidden"] == False) )
        ):
-      options=options+'\n * '+key
+      options=options+'\n   * '+key
     if "alias" in item:
       options=options+" ( "
       for j in range(0, len(item["alias"])):
@@ -820,38 +820,27 @@ def showHelpMedia(what,msg):
 def showHelpEvent(item,msg):
   options=""
   if mayShowHelp(item,msg):
-    options=options+'\n'"  " + item["name"]
+    options=options+'\n'" * " + item["name"] + " - Optional associated action:"
     options=options+getStringHelpAction(item["action"],True)
-    if "interval" in item:
-        options=options+'\n'"    Executed each " + str(item["interval"]) + "(s)"
   return options
 
 
 def showHelpEvents(msg):
   options=""
   what="event"
-  if what in GLB_configuration[what]:
+  if what in GLB_configuration:
     for item in GLB_configuration[what]:
       options=options+showHelpEvent(item,msg)
   return options
 
 def showHelpEventsBOOT(msg):
   options=""
-  what="event"
-  if what in GLB_configuration[what]:
-    for item in GLB_configuration[what]:
-      options=options+showHelpEvent(GLB_configuration["event"][item["name"]],msg)
+  if "eventBOOT" in GLB_configuration:
+    options=options+'\n'"   Boot events:"
+    for item in GLB_configuration["eventBOOT"]:
+      options=options+" "+ item["name"]
   return options
 
-
-  if what in GLB_configuration:
-    for item in GLB_configuration[what]:
-      if mayShowHelp(item,msg):
-        options=options+'\n'"  " + item["name"]
-        options=options+getStringHelpAction(item["action"],True)
-        if "interval" in item:
-          options=options+'\n'"    Executed each " + str(item["interval"]) + "(s)"
-  return options
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
@@ -1046,7 +1035,6 @@ def main(configfile):
         options=options+'\n'" * start/stop event [name] or all:"
         options=options+'\n'"   Available [names]:"
         options=options+showHelpEvents(msg)
-        options=options+'\n'"   Available on boot events [names]:"
         options=options+showHelpEventsBOOT(msg)
 
         options=options+"\n-------------------------------"
@@ -1056,11 +1044,12 @@ def main(configfile):
         options=options+showHelpMedia("media-document",msg)        
 
         if "helphidden" in msg:
-          options=options+"\n-------BUILT IN COMMANDS--------------------------"
-          options=options+'\n'"nomagic [alias]"
-          options=options+'\n'"trusted"
-          options=options+'\n'"help"
-          options=options+'\n'"helphidden"
+          options=options+"\n-------------------------------"
+          options=options+"\n     BUILT IN COMMANDS-"
+          options=options+'\n'" *nomagic [alias]"
+          options=options+'\n'" *trusted"
+          options=options+'\n'" *help"
+          options=options+'\n'" *helphidden"
           options=options+"\n------------------------------------"
 
         bot.send_message(message.chat.id,options)
