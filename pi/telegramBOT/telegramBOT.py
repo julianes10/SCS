@@ -298,7 +298,7 @@ def runActionAndSendMessageToSubscribers(subscriberList, actionName):
     result=runAction(actionDescriptor,"AUTO")
     for i in subscriberList:
       if result is None:
-        bot.send_message(i,'Error: Exception executing {0}'.format(key))
+        bot.send_message(i,'Error: Exception executing {0}'.format(actionName))
       else:
         sendActionResult(i,actionDescriptor,result) 
 
@@ -308,8 +308,11 @@ def runActionAndSendMessageToSubscribers(subscriberList, actionName):
 
 def runAction(action,originalMsg):
   rt=None
-  msgSplitted=originalMsg.split()
+
   try:
+    if originalMsg==None:
+      originalMsg=""
+    msgSplitted=originalMsg.split()
     cmd=action["cmd"]
     if "TELEGRAM_COMMAND" in action["cmd"]:
         helper.internalLogger.debug("Custom cmd with TELEGRAM_COMMAND {0}'".format(cmd)) 
@@ -631,11 +634,12 @@ def isValidItem(msg,l,key):
 def processMediaMessage(message):
   now=time.time()
   try:
+   actionName="UNKNOWN"
    helper.internalLogger.debug("message.content_type:{0}".format(message.content_type))
    if message.content_type == 'video':
      fileID = message.video.file_id
      pathFile=GLB_configuration["media-video"]["basePath"]+"/"+str(now)+".mp4"
-     actionHook=GLB_configuration["actions"][GLB_configuration["media-video"]["action"]]
+     actionName=GLB_configuration["media-video"]["action"]
      try:
        os.makedirs(GLB_configuration["media-video"]["basePath"])
      except:
@@ -643,7 +647,7 @@ def processMediaMessage(message):
    elif message.content_type == 'photo':
      fileID = message.photo[-1].file_id
      pathFile=GLB_configuration["media-photo"]["basePath"]+"/"+str(now)+".jpg"  
-     actionHook=GLB_configuration["actions"][GLB_configuration["media-photo"]["action"]]     
+     actionName=GLB_configuration["media-photo"]["action"]
      try:
        os.makedirs(GLB_configuration["media-photo"]["basePath"])
      except:
@@ -651,7 +655,7 @@ def processMediaMessage(message):
    elif message.content_type == 'document':
      fileID = message.document.file_id
      pathFile=GLB_configuration["media-document"]["basePath"]+"/"+message.document.file_name
-     actionHook=GLB_configuration["actions"][GLB_configuration["media-document"]["action"]]
+     actionName=GLB_configuration["media-document"]["action"]
      try:
        os.makedirs(GLB_configuration["media-document"]["basePath"])
      except:
@@ -665,12 +669,13 @@ def processMediaMessage(message):
    helper.internalLogger.debug("Dumping media in :{0}".format(pathFile))
    with open(pathFile, 'wb') as new_file:
          new_file.write(downloaded_file)
-   result=runAction(actionHook,"video "+pathFile)
+   ### FAKE MSG, IMPORTANT THING IS ADDED PATHFILE AS PARAMETER CRITERIA
+   result=runAction(GLB_configuration["actions"][actionName],"MEDIA " + pathFile)
    if result is None:
-     bot.send_message(message.chat.id,'Error: Exception executing {0}'.format(key))
+     bot.send_message(message.chat.id,'Error: Exception associated executing action {0}'.format(actionName))
      bot.reply_to(message, "Ignoring this request.")
    else:
-     sendActionResult(message.chat.id,actionHook,result)    
+     sendActionResult(message.chat.id,GLB_configuration["actions"][actionName],result)    
 
   except Exception as e:
     e = sys.exc_info()[0]

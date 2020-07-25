@@ -12,13 +12,9 @@
 
   "ongoingDB":"/tmp/telegramBOT.ongoing",
   "ongoingDBNV":"/tmp/telegramBOT.ongoingNV",
-  "menu" : ["foto","fotoHD","fotoFHD","foto2K","time","uptime","test","run","mem","status","video-sample",
-            "cleanphotos","getss"   ,"noss"   ,"showss",
-            "cleanvideos","getvs"   ,"novs"   ,"showvs",
-            "cleanmedia" ,"getmedia","nomedia","showmedia"],
   "pollingTimeout" : 10,
   "actions" : { 
-    "foto"  : { "cmd" : "fswebcam -r  400x300 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img", "alias":["f","photo"],"hint": "Dispara una foto 00x300 "},
+    "foto"  : { "cmd" : "fswebcam -r  400x300 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img", "alias":["f","photo"],"hint": "Dispara una foto 400x300 "},
     "video-sample"  : { "cmd" : "echo Here it is the video sample", "video": "/tmp/file.mp4"},
     "fotoHD": { "cmd" : "fswebcam -r  1280x720 --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
     "fotoFHD": { "cmd" : "fswebcam -r 1920×1080  --jpeg 85 -D 1 /tmp/img", "image": "/tmp/img"},
@@ -45,6 +41,10 @@
     "showmedia"  :    { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayMedia.sh -m -u  /tmp/telegramMedia/ -r 1 -n -x 60", "background": true},
 
     "rxvideo" : { "cmd" : "/home/jes/prj/pipapi/pi/webStreamingAgent/displayMedia.sh -v -r 2 -u ", "include-message-args":true,"background": true},
+    "rxdoc" : { 
+       "cmd" : "/home/jes/prj/parcesec/SCS/utils/eggSurprise.sh", 
+       "include-message-args":true,
+       "background": false},
     "run"  : { "cmd" : "TELEGRAM_COMMAND","hidden":true},
     "status": { "cmd" : "wkhtmltoimage localhost:5061 /tmp/status.jpg >/dev/null", "image":"/tmp/status.jpg","hidden":true}
   },
@@ -60,8 +60,11 @@
     { "name": "pepito3","action" : "fotoHD"},
     { "name": "pepito4","action" : "foto"}
   ],
-  "eventBOOT": [{"name":"pepito4"},{"name":"pepito1"}],
-  "media-photo" : { "action" : "rxfoto", "basePath" : "/tmp/telegramMedia/photo"},
-  "media-video" : { "action" : "rxvideo", "basePath" : "/tmp/telegramMedia/video"}
+  "eventBOOT": [
+    {"name":"pepito4"},
+    {"name":"pepito1"}],
+  "media-photo" :     { "action" : "rxfoto",  "basePath" : "/tmp/telegramMedia/photo"},
+  "media-video" :     { "action" : "rxvideo", "basePath" : "/tmp/telegramMedia/video"},
+  "media-document" :  { "action" : "rxdoc",   "basePath" : "/tmp/telegramMedia/document", "hidden":true}
 }
 
