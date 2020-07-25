@@ -749,6 +749,7 @@ def addTrustedUser(id,alias):
 def delTrustedUser(id,alias):
   global GLB_trusted
   try:
+   if "users" in GLB_trusted:
     for i in GLB_trusted["users"]:
       if id != 0 and i["id"]==id:
         GLB_trusted["users"].remove(i)
@@ -1078,8 +1079,11 @@ def main(configfile):
       #-------------------------------------------------------------------
       if "trusted" in msg:
         rt="Trusted user list:"
-        for j in GLB_trusted["users"]:
-          rt=rt+'\n'+j['alias'] + " ("+str(j['id'])+")"
+        if "users" in GLB_trusted:
+          for j in GLB_trusted["users"]:
+            rt=rt+'\n'+j['alias'] + " ("+str(j['id'])+")"
+        else:
+          rt=rt+" NONE"
         bot.send_message(message.chat.id,rt)
         return
           
