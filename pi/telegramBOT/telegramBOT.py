@@ -825,8 +825,10 @@ def showHelpMedia(what,msg):
 def showHelpEvent(item,msg):
   options=""
   if mayShowHelp(item,msg):
-    options=options+'\n'" * " + item["name"] + " - Optional associated action:"
-    options=options+getStringHelpAction(item["action"],True)
+    options=options+'\n'" * " + item["name"]
+    if "action" in item:
+      options=options+ " - Optional associated action:"
+      options=options+getStringHelpAction(item["action"],True)
   return options
 
 
