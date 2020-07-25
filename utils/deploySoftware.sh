@@ -113,7 +113,10 @@ if [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
   if [ "$arg_ori" == "local" ]; then
 
     # Cleaning
+    echo "#-----------------------------------------------#"       
     echo "# Preparing the tarball locally..." 
+    echo "#-----------------------------------------------#"       
+
     echo "## Cleaning local repo..." 
     find -L . -type f -name '*.o' -exec rm {} +
     find -L . -type f -name '*~' -exec rm {} +
@@ -126,7 +129,7 @@ if [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
 
     for item in $SERVICES_LIST; do
       echo "## Customizing the service $item to $PROJECT_NAME... "
-      sed -i -- 's/PROJECT_NAME/$PROJECT_NAME/g' $TMP_DEPLOY/$item/install/*
+      sed -i -- "s/PROJECT_NAME/$PROJECT_NAME/g" $TMP_DEPLOY/$item/install/*
       chmod 644 $TMP_DEPLOY/$item/install/*.service 
     done
 
@@ -136,7 +139,9 @@ if [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
     fi
 
     if [ $deployArduino -eq 1 ]; then
+       echo "#-----------------------------------------------#"       
        echo "## Compiling local arduino software..."
+       echo "#-----------------------------------------------#"       
        ## Compile localy
        pushd ./arduino
        make
@@ -159,9 +164,11 @@ if [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
 
     fi
 
-
+    echo "#-----------------------------------------------#"
     echo "# Preparing script to run remotely..." 
+    echo "#-----------------------------------------------#" 
     echo "#!/bin/bash">$SS 
+    echo "echo Starting $SS...">$SS
     if [ -f install/custom-install.pre.sh ]; then
        cat install/custom-install.pre.sh >> $SS
     fi
@@ -185,12 +192,13 @@ if [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
       echo "cp -raf $TMP_DEPLOY/$item/install/*  /lib/systemd/system/">>$SS
     done
     echo "systemctl daemon-reload">>$SS
-    echo "systemctl enable $DEPLOY_SERVICE">>$SS
-    echo "systemctl start $SERVICES_LIST">>$SS
+    echo "systemctl enable $SERVICES_LIST">>$SS
+    echo "systemctl start  $SERVICES_LIST">>$SS
 
     if [ -f install/custom-install.post.sh ];then
        cat install/custom-install.post.sh >> $SS
     fi
+    echo "echo Ending $SS...">>$SS
    
     chmod +x $SS 
     #LET IT FOR DEBUGGING: echo "rm -rf $TMP_DEPLOY" >>$SS 
@@ -205,15 +213,24 @@ if [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
 
 
     if [ "$arg_dest" == "remote" ]  ; then
-      echo "# Transfering the files..." 
+      echo "#-----------------------------------------------#"       
+      echo "# Transfering the files via SSH..." 
+      echo "#-----------------------------------------------#"      
       scp -r -P $PI_PORT $TMP_DEPLOY $PI_USER@$PI_IPNAME:$TMP_DEPLOY
     fi
 
-    if [ "$arg_dest" == "remote" ]  ; then
-      echo "# Deploying remotely..." 
-      ssh -p $PI_PORT pi@$PI_IPNAME "sudo $SS"
-    fi
 
+    if [ "$arg_dest" == "remote" ]  ; then
+      echo "#-----------------------------------------------#"       
+      echo "# Deploying remotely via SSH..." 
+      echo "#-----------------------------------------------#"       
+      ssh -p $PI_PORT pi@$PI_IPNAME "sudo $SS"
+
+      echo "#-----------------------------------------------#"       
+      echo "# Checking service status via SSH..." 
+      echo "#-----------------------------------------------#"       
+      ssh -p $PI_PORT pi@$PI_IPNAME "systemctl status $SERVICES_LIST -n 0"
+    fi
   else
     echo "ERROR: no extra option selected for deployed remotely"
     usage
@@ -223,7 +240,7 @@ else
   usage
 fi
 
-echo "------------------------------------------------"
+echo "-----------------    DONE    -------------------"
 echo "------------------------------------------------"
 echo "Deployment finished, check message above just in case something stinks... and have fun"
 echo "  Remember cheatsheet:"
