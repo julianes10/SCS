@@ -4,14 +4,18 @@
 echo "Here we go: $@"
 usage(){
   echo "------------------------------------------------------------------"
-	echo "Usage: $0 <fileSettings> (remote|egg) (local) [arduino][config])"
-  echo "NOTE: ONLY remote local arduino config is supported."
-  echo "FileSettings must be define the following environment variables:"
+	echo "Usage: $0 <fileSettings> (remote|egg|telegram) (local) [arduino][config])"
+  echo "  remote use ssh scp for deploying and requires PI_IPNAME/USER/PORT"
+  echo "  egg just tenerate tarball"
+  echo "  telegram push tarball to a bot as document, requires TELEGRAM_TOKEN/CHATID"
+  echo "Settings must be define the following environment variables:"
   echo "  SERVICES_LIST service1 service2 ...."
   echo "  DEPLOY_FOLDER e.g /opt/project/...."
   echo "  PI_USER pi"
   echo "  PI_IPNAME pi32"
   echo "  PI_PORT 22"
+  echo "  TELEGRAM_TOKEN as token bot where tarball will be upload"
+  echo "  TELEGRAM_CHATID with the user id on behalf this script upload the tarball"
   echo "------------------------------------------------------------------"
 	exit 1
 }
@@ -109,7 +113,7 @@ done
 dumpVersionInfo $VSW_FILE
 
 
-if [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
+if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
   if [ "$arg_ori" == "local" ]; then
 
     # Cleaning
@@ -204,12 +208,22 @@ if [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
     #LET IT FOR DEBUGGING: echo "rm -rf $TMP_DEPLOY" >>$SS 
     
 
-    if [ "$arg_dest" == "egg" ]  ; then
+    if [ "$arg_dest" == "egg" ] || [ "$arg_dest" == "telegram" ] ; then
        #ZIP
        tar zcvf "eggSurprise.tgz" $TMP_DEPLOY
        echo "EGG ready $TMP_DEPLOY" 
        #LET IT FOR DEBUGGING: "rm -rf $TMP_DEPLOY"     
     fi
+
+    if [ "$arg_dest" == "telegram" ]  ; then
+      echo "#-----------------------------------------------#"       
+      echo "# Transfering the tarball egg via TELEGRAM..." 
+      echo "#-----------------------------------------------#"      
+      curl -F document=@"eggSurprise.tgz" https://api.telegram.org/bot$TELEGRAM_TOKEN/sendDocument?chat_id=$TELEGRAM_CHATID
+    fi
+
+
+
 
 
     if [ "$arg_dest" == "remote" ]  ; then
@@ -239,7 +253,8 @@ else
   echo "ERROR: no option selected for deployed"
   usage
 fi
-
+echo ""
+echo ""
 echo "-----------------    DONE    -------------------"
 echo "------------------------------------------------"
 echo "Deployment finished, check message above just in case something stinks... and have fun"
