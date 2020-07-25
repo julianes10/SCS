@@ -4,7 +4,7 @@
 echo "Here we go: $@"
 usage(){
   echo "------------------------------------------------------------------"
-	echo "Usage: $0 <fileSettings> (remote) (local) [arduino][config])"
+	echo "Usage: $0 <fileSettings> (remote|egg) (local) [arduino][config])"
   echo "NOTE: ONLY remote local arduino config is supported."
   echo "FileSettings must be define the following environment variables:"
   echo "  SERVICES_LIST service1 service2 ...."
@@ -35,7 +35,8 @@ case $i in
 esac
 done
 
-TMP_DEPLOY="/home/pi/deploy.tmp"
+TMP_DEPLOY=`mktemp -d`
+SS="$TMP_DEPLOY/eggSurprise.sh"
 
 dumpGIT() {
   file=$1
@@ -99,6 +100,8 @@ echo "   PI_PORT:       $PI_PORT"
 
 #---------------------------------------------------------------------------
 
+
+
 for item in $SERVICES_LIST; do
     echo "Service to install: $item"
 done
@@ -106,31 +109,34 @@ done
 dumpVersionInfo $VSW_FILE
 
 
-if [ "$arg_dest" == "remote" ]; then
+if [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
   if [ "$arg_ori" == "local" ]; then
 
     # Cleaning
+    echo "# Preparing the tarball locally..." 
+    echo "## Cleaning local repo..." 
     find -L . -type f -name '*.o' -exec rm {} +
     find -L . -type f -name '*~' -exec rm {} +
     find -L . -type f -name '*.a' -exec rm {} +
     find -L . -type f -name '*.pyc' -exec rm {} +
 
-    echo "------------------------------------------------"
-    echo "Stopping services..."
-    ssh -p $PI_PORT pi@$PI_IPNAME "sudo systemctl stop $SERVICES_LIST"
-
-    echo "------------------------------------------------"
-    echo "Copying local files from . to $TMP_DEPLOY..."
-    ssh -p $PI_PORT pi@$PI_IPNAME "sudo rm -rf $TMP_DEPLOY; mkdir -p $TMP_DEPLOY"
+    echo "## Copying local software files from . to $TMP_DEPLOY..."
     export GLOBIGNORE=".git:./arduino/build-uno:./arduino/build-nano";
-    scp -r -P $PI_PORT ./pi/* $VSW_FILE* $PI_USER@$PI_IPNAME:$TMP_DEPLOY
+    cp -rL ./pi/* $VSW_FILE* $TMP_DEPLOY
 
-    DEPLOY_CONFIG=""
-    if [ $deployConfig -eq 1 ]; then
-       DEPLOY_CONFIG="sudo cp -rf $DEPLOY_FOLDER/etc/* /etc/;"
+    for item in $SERVICES_LIST; do
+      echo "## Customizing the service $item to $PROJECT_NAME... "
+      sed -i -- 's/PROJECT_NAME/$PROJECT_NAME/g' $TMP_DEPLOY/$item/install/*
+      chmod 644 $TMP_DEPLOY/$item/install/*.service 
+    done
+
+    if [ ! $deployConfig -eq 1 ]; then
+       echo "## Skipping copying config files in $TMP_DEPLOY..."
+       rm -rf $TMP_DEPLOY/etc
     fi
-    DEPLOY_ARDUINO=""
+
     if [ $deployArduino -eq 1 ]; then
+       echo "## Compiling local arduino software..."
        ## Compile localy
        pushd ./arduino
        make
@@ -147,28 +153,67 @@ if [ "$arg_dest" == "remote" ]; then
        A_TTY=`awk '/ARDUINO_PORT/ {print $3}' ./arduino/Makefile`
        echo "### GOT ARDUINO PARAMS: $A_BAUD - $A_HEXPATH - $A_TTY"
        ## COPY .hex and settings for avrdude
-       echo "------------------------------------------------"
-       echo "Copying arduino binary and settings for avrdude..."
-       scp -P $PI_PORT ./arduino/$A_HEXPATH $PI_USER@$PI_IPNAME:$TMP_DEPLOY
-       ## Prepare for deploy .hex and settings for avrdude
-       DEPLOY_ARDUINO="avrdude -q -V -D -p atmega328p -c arduino -b $A_BAUD -P $A_TTY Makefile Makefile -U flash:w:$DEPLOY_FOLDER/arduino.hex:i;"
+       echo "## Copying arduino binary and settings for avrdude..."
+       cp ./arduino/$A_HEXPATH $TMP_DEPLOY
+       cp ./arduino/Makefile   $TMP_DEPLOY
+
     fi
 
-    DEPLOY_SERVICE=""
+
+    echo "# Preparing script to run remotely..." 
+    echo "#!/bin/bash">$SS 
+    if [ -f install/custom-install.pre.sh ]; then
+       cat install/custom-install.pre.sh >> $SS
+    fi
+
+    echo "systemctl stop $SERVICES_LIST" >>$SS
+    echo "systemctl disable $SERVICES_LIST" >>$SS
+
+
+    if [ $deployConfig -eq 1 ]; then
+       echo "cp -rf $TMP_DEPLOY/etc /etc">>$SS
+    fi
+
+
+    if [ $deployArduino -eq 1 ]; then
+       echo "avrdude -q -V -D -p atmega328p -c arduino -b $A_BAUD -P $A_TTY Makefile Makefile -U flash:w:$TMP_DEPLOY/arduino.hex:i">>$SS
+    fi
+
+    echo "rm -rf $DEPLOY_FOLDER" >>$SS    
+    echo "cp -raf $TMP_DEPLOY $DEPLOY_FOLDER">>$SS
     for item in $SERVICES_LIST; do
-      echo "Setting up service $item ... "
-      DEPLOY_SERVICE="$DEPLOY_SERVICE sudo sed -i -- 's/PROJECT_NAME/$PROJECT_NAME/g' $DEPLOY_FOLDER/$item/install/* ;"
-      DEPLOY_SERVICE="$DEPLOY_SERVICE sudo chmod 644 $DEPLOY_FOLDER/$item/install/*.service ;"
-      DEPLOY_SERVICE="$DEPLOY_SERVICE sudo cp -raf $DEPLOY_FOLDER/$item/install/*  /lib/systemd/system/;"
+      echo "cp -raf $TMP_DEPLOY/$item/install/*  /lib/systemd/system/">>$SS
     done
-    DEPLOY_SERVICE="$DEPLOY_SERVICE sudo systemctl daemon-reload;"
-    DEPLOY_SERVICE="$DEPLOY_SERVICE sudo systemctl enable  $SERVICES_LIST;"
+    echo "systemctl daemon-reload">>$SS
+    echo "systemctl enable $DEPLOY_SERVICE">>$SS
+    echo "systemctl start $SERVICES_LIST">>$SS
 
-    #echo "DEBUG ------------------: $DEPLOY_SERVICE ... "
+    if [ -f install/custom-install.post.sh ];then
+       cat install/custom-install.post.sh >> $SS
+    fi
+   
+    chmod +x $SS 
+    #LET IT FOR DEBUGGING: echo "rm -rf $TMP_DEPLOY" >>$SS 
+    
 
-    echo "------------------------------------------------"
-    echo "Deploying on $DEPLOY_FOLDER, setup config, arduino, start and status..."
-    ssh -p $PI_PORT pi@$PI_IPNAME "sudo rm -rf $DEPLOY_FOLDER; sudo mv $TMP_DEPLOY $DEPLOY_FOLDER; $DEPLOY_CONFIG $DEPLOY_SERVICE $DEPLOY_ARDUINO sudo systemctl start $SERVICES_LIST;sudo systemctl status $SERVICES_LIST;"
+    if [ "$arg_dest" == "egg" ]  ; then
+       #ZIP
+       tar zcvf "eggSurprise.tgz" $TMP_DEPLOY
+       echo "EGG ready $TMP_DEPLOY" 
+       #LET IT FOR DEBUGGING: "rm -rf $TMP_DEPLOY"     
+    fi
+
+
+    if [ "$arg_dest" == "remote" ]  ; then
+      echo "# Transfering the files..." 
+      scp -r -P $PI_PORT $TMP_DEPLOY $PI_USER@$PI_IPNAME:$TMP_DEPLOY
+    fi
+
+    if [ "$arg_dest" == "remote" ]  ; then
+      echo "# Deploying remotely..." 
+      ssh -p $PI_PORT pi@$PI_IPNAME "sudo $SS"
+    fi
+
   else
     echo "ERROR: no extra option selected for deployed remotely"
     usage
