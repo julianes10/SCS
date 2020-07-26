@@ -4,7 +4,7 @@ After=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/opt/PROJECT_NAME/wildcardService/wildcardService.py --configfile /etc/wildcardService.conf
+ExecStart=/opt/PROJECT_NAME/SERVICE_NAME/wildcardService.py --configfile /etc/SERVICE_NAME.conf
 Restart=always
 
 [Install]
