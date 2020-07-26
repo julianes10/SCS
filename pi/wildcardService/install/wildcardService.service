@@ -3,8 +3,6 @@ Description=Wildcard service launcher
 After=multi-user.target
 
 [Service]
-User = pi
-Group = pi
 Type=simple
 ExecStart=/opt/PROJECT_NAME/wildcardService/wildcardService.py --configfile /etc/wildcardService.conf
 Restart=always
