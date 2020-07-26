@@ -134,6 +134,7 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
     for item in $SERVICES_LIST; do
       echo "## Customizing the service $item to $PROJECT_NAME... "
       sed -i -- "s/PROJECT_NAME/$PROJECT_NAME/g" $TMP_DEPLOY/$item/install/*
+      sed -i -- "s/SERVICE_NAME/$item/g" $TMP_DEPLOY/$item/install/*
       chmod 644 $TMP_DEPLOY/$item/install/*.service 
     done
 
@@ -172,7 +173,7 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
     echo "# Preparing script to run remotely..." 
     echo "#-----------------------------------------------#" 
     echo "#!/bin/bash">$SS 
-    echo "exec > /tmp/latestEggCore.log 2>&1">>$SS
+    echo "exec > /tmp/eggSurprise.log 2>&1">>$SS
     echo "echo 'Starting into the egg... '">>$SS
     echo "date">>$SS
     echo "whoami">>$SS

@@ -4,8 +4,8 @@ After=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/opt/PROJECT_NAME/telegramBOT/telegramBOT.py --configfile /etc/telegramBOT.conf
-WorkingDirectory=/opt/PROJECT_NAME/telegramBOT/
+ExecStart=/opt/PROJECT_NAME/SERVICE_NAME/telegramBOT.py --configfile /etc/SERVICE_NAME.conf
+WorkingDirectory=/opt/PROJECT_NAME/SERVICE_NAME/
 Restart=always
 
 [Install]
