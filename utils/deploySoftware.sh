@@ -172,37 +172,56 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
     echo "# Preparing script to run remotely..." 
     echo "#-----------------------------------------------#" 
     echo "#!/bin/bash">$SS 
-    echo "echo Starting $SS...">$SS
+    echo "exec > /tmp/latestEggCore.log 2>&1">>$SS
+    echo "echo 'Starting into the egg... '">>$SS
+    echo "date">>$SS
+    echo "whoami">>$SS
+    #echo "set">>$SS
+    echo "echo 'Executing custom-install-pre...'">>$SS
+
     if [ -f install/custom-install.pre.sh ]; then
        cat install/custom-install.pre.sh >> $SS
     fi
 
+    echo "echo 'Stopping services...'">>$SS
     echo "systemctl stop $SERVICES_LIST" >>$SS
+    echo "echo 'Disabling services...'">>$SS
     echo "systemctl disable $SERVICES_LIST" >>$SS
 
-
     if [ $deployConfig -eq 1 ]; then
-       echo "cp -rf $TMP_DEPLOY/etc /etc">>$SS
+       echo "echo 'Deploying config...'">>$SS
+       echo "cp -rf etc/* /etc">>$SS
     fi
-
 
     if [ $deployArduino -eq 1 ]; then
-       echo "avrdude -q -V -D -p atmega328p -c arduino -b $A_BAUD -P $A_TTY Makefile Makefile -U flash:w:$TMP_DEPLOY/arduino.hex:i">>$SS
+       echo "avrdude -q -V -D -p atmega328p -c arduino -b $A_BAUD -P $A_TTY Makefile Makefile -U flash:w: arduino.hex:i">>$SS
     fi
 
+
+    echo "echo 'Removing target folder...'">>$SS
+
     echo "rm -rf $DEPLOY_FOLDER" >>$SS    
-    echo "cp -raf $TMP_DEPLOY $DEPLOY_FOLDER">>$SS
+    echo "mkdir -p $DEPLOY_FOLDER" >>$SS    
+
+    echo "echo 'Copying new binaries...'">>$SS
+
+    echo "cp -raf * $DEPLOY_FOLDER">>$SS
+
+    echo "echo 'Enabling new services...'">>$SS
     for item in $SERVICES_LIST; do
-      echo "cp -raf $TMP_DEPLOY/$item/install/*  /lib/systemd/system/">>$SS
+      echo "cp -raf $item/install/*  /lib/systemd/system/">>$SS
     done
     echo "systemctl daemon-reload">>$SS
     echo "systemctl enable $SERVICES_LIST">>$SS
+    echo "echo 'Starting new services...'">>$SS
     echo "systemctl start  $SERVICES_LIST">>$SS
 
+
+    echo "echo 'Executing custom-install-post...'">>$SS
     if [ -f install/custom-install.post.sh ];then
        cat install/custom-install.post.sh >> $SS
     fi
-    echo "echo Ending $SS...">>$SS
+    echo "echo 'Ending in the egg...'">>$SS
    
     chmod +x $SS 
     #LET IT FOR DEBUGGING: echo "rm -rf $TMP_DEPLOY" >>$SS 
@@ -210,7 +229,10 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
 
     if [ "$arg_dest" == "egg" ] || [ "$arg_dest" == "telegram" ] ; then
        #ZIP
-       tar zcvf "eggSurprise.tgz" $TMP_DEPLOY
+       MYHOME=`pwd`
+       pushd $TMP_DEPLOY
+       tar zcvf "$MYHOME/eggSurprise.tgz" .
+       popd 
        echo "EGG ready $TMP_DEPLOY" 
        #LET IT FOR DEBUGGING: "rm -rf $TMP_DEPLOY"     
     fi
@@ -221,10 +243,6 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
       echo "#-----------------------------------------------#"      
       curl -F document=@"eggSurprise.tgz" https://api.telegram.org/bot$TELEGRAM_TOKEN/sendDocument?chat_id=$TELEGRAM_CHATID
     fi
-
-
-
-
 
     if [ "$arg_dest" == "remote" ]  ; then
       echo "#-----------------------------------------------#"       
@@ -238,7 +256,7 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
       echo "#-----------------------------------------------#"       
       echo "# Deploying remotely via SSH..." 
       echo "#-----------------------------------------------#"       
-      ssh -p $PI_PORT pi@$PI_IPNAME "sudo $SS"
+      ssh -p $PI_PORT pi@$PI_IPNAME "cd $TMP_DEPLOY; sudo ./eggSurprise.sh"
 
       echo "#-----------------------------------------------#"       
       echo "# Checking service status via SSH..." 
