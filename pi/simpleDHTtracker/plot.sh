@@ -39,12 +39,14 @@ gnuplot <<-EOFMarker
     set grid
     set y2tics nomirror
     set ytics nomirror
-    set autoscale  y
-    set autoscale y2
+    set autoscale  y 
+    set autoscale y2 
     set style line 1 lt rgb "red" lw 3 pt 6
     set style line 2 lt rgb "blue" lw 2 pt 6
     set xtics rotate by 60 right
-    plot "$inputFile" using (column(1) + $offset_tz):2 title "Temperature" with line axes x1y1 ls 1, "$inputFile" using (column(1) + $offset_tz):3 title "Humidity"  with line axes x1y2 ls 2
+    set y2label "Temperature Celsius"
+    set ylabel  "Humidity %"
+    plot "$inputFile" using (column(1) + $offset_tz):2 title "Temperature" with line axes x1y2 ls 1, "$inputFile" using (column(1) + $offset_tz):3 title "Humidity"  with line axes x1y1 ls 2
 EOFMarker
 }
 #------------------------------------------
@@ -67,7 +69,9 @@ gnuplot <<-EOFMarker
     set xtics rotate by 60 right
     set style line 1 lt rgb "red" lw 3 pt 6
     set style line 2 lt rgb "blue" lw 2 pt 6
-    plot "$inputFile" using (column(1) + $offset_tz):2 title "Temperature" with line axes x1y1 ls 1, "$inputFile" using (column(1) + $offset_tz):3 title "Humidity"  with line axes x1y2 ls 2
+    set y2label "Temperature Celsius"
+    set ylabel  "Humidity %"
+    plot "$inputFile" using (column(1) + $offset_tz):2 title "Temperature" with line axes x1y2 ls 1, "$inputFile" using (column(1) + $offset_tz):3 title "Humidity"  with line axes x1y1 ls 2
 EOFMarker
 }
 
