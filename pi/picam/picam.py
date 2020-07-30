@@ -61,6 +61,49 @@ def getLiveStatus():
   helper.internalLogger.debug("Live is {0}".format(rt))
   return rt
 
+
+
+
+'''----------------------------------------------------------'''
+def setLiveStatusAtBoot():
+
+  if not "live" in GLB_configuration: 
+    return
+  if not "enable" in GLB_configuration["live"]:
+    return
+  if GLB_configuration["live"]["enable"]:
+    enableAtBoot=GLB_configuration["live"]["enable"]
+    if "enableBoot" in GLB_configuration["live"]:
+      enableAtBoot=GLB_configuration["live"]["enableBoot"]
+
+  #By default deployment system will setup as enabled
+  if enableAtBoot:  #Start and enable for the next
+    helper.internalLogger.debug("Enabling live at boot...")
+    try:
+      subprocess.check_output(GLB_configuration["live"]["enableCmd"], shell=True)
+    except subprocess.CalledProcessError as execution:
+      helper.internalLogger.debug("Return code: {0}. Output {1}".format(execution.returncode, execution.output))
+
+    try:
+      subprocess.check_output(GLB_configuration["live"]["startCmd"], shell=True)
+    except subprocess.CalledProcessError as execution:
+      helper.internalLogger.debug("Return code: {0}. Output {1}".format(execution.returncode, execution.output))
+
+  else: #Stop and disable for next boot
+    helper.internalLogger.debug("Disabling live at boot...")
+    try:
+      subprocess.check_output(GLB_configuration["live"]["stopCmd"], shell=True)
+    except subprocess.CalledProcessError as execution:
+      helper.internalLogger.debug("Return code: {0}. Output {1}".format(execution.returncode, execution.output))
+
+    try:
+      subprocess.check_output(GLB_configuration["live"]["disableCmd"], shell=True)
+    except subprocess.CalledProcessError as execution:
+      helper.internalLogger.debug("Return code: {0}. Output {1}".format(execution.returncode, execution.output))
+
+
+
+
 '''----------------------------------------------------------'''
 '''----------------------------------------------------------'''
 
@@ -263,6 +306,8 @@ class ServoHandler:
         self.setPan(cfg["initPan"])
       if "initTilt" in cfg:
         self.setTilt(cfg["initTilt"])
+      if "powerSavingTimeout" in cfg:
+        self.powerSavingTimeout=cfg["powerSavingTimeout"]
    except Exception as e:
       helper.internalLogger.warning("Motor CAM is not in good shape...")
       helper.einternalLogger.exception(e)
@@ -294,8 +339,10 @@ class ServoHandler:
   def stopDriver(self):
    try:
     if amIaPi():
-      helper.internalLogger.debug("Servo end...")   
-      self.pwm.exit_PCA9685()
+      helper.internalLogger.debug("Asking for Servo to end...")   
+      if not self.pwm == None:
+        self.pwm.exit_PCA9685()
+      helper.internalLogger.debug("Servo is resting")   
     self.pwm=None
    except Exception as e:
       helper.internalLogger.warning("Motor CAM is not in good shape...")
@@ -328,7 +375,8 @@ class ServoHandler:
       if self.pwm is None:
         self.restartDriver()
       self.pwm.setRotationAngle(1,int(value))
-      #self.stopDriver()
+      self.latestUsageTS=time.time()
+
    except Exception as e:
       helper.internalLogger.warning("Motor CAM is not in good shape...")
       helper.einternalLogger.exception(e)
@@ -343,7 +391,7 @@ class ServoHandler:
       if self.pwm is None:
         self.restartDriver()
       self.pwm.setRotationAngle(0,int(value))
-      #self.stopDriver()
+      self.latestUsageTS=time.time()
    except Exception as e:
       helper.internalLogger.warning("Motor CAM is not in good shape...")
       helper.einternalLogger.exception(e)
@@ -376,6 +424,23 @@ class ServoHandler:
     self.tiltBK = 0
     self.autoTrack.reset()
     self.backAfterAutoTrack=False
+    self.powerSavingTimeout = 0
+    self.latestUsageTS = 0
+
+
+  def refreshPowerSaving(self):
+    if self.powerSavingTimeout == 0:
+      return
+    if self.latestUsageTS == 0:
+      return
+    now=time.time()
+    #helper.internalLogger.debug("JODER {0} +  {1} = {2}, comparing with {3}".format(self.latestUsageTS, self.powerSavingTimeout,self.latestUsageTS + self.powerSavingTimeout,now))
+    if (self.latestUsageTS + self.powerSavingTimeout) < now:
+      helper.internalLogger.debug("Power savings timeout has expired")
+      self.latestUsageTS=0
+      self.stopDriver()
+  
+
 
   def toDict(self):
     rt={}
@@ -385,6 +450,10 @@ class ServoHandler:
     rt['tiltBK'] = self.tiltBK
     rt['autoTrack'] = self.autoTrack.toDict()
     rt['backAfterAutoTrack'] = self.backAfterAutoTrack
+    rt['powerSavingTimeout'] = self.powerSavingTimeout
+    rt['latestUsageTS'] = self.latestUsageTS
+
+
     return rt
 
 
@@ -502,6 +571,41 @@ def requestNewPosition(data):
 
       return GLB_servo.toDict()
 
+
+'''----------------------------------------------------------'''
+def requestRelease(data):
+      global GLB_servo
+
+      if "release" in data:  #saving power
+        if data["release"]:
+          GLB_servo.end()
+        else:
+          GLB_servo.setDeltaTilt(0)
+          GLB_servo.setDeltaTilt(0)    
+
+      return GLB_servo.toDict()
+
+'''----------------------------------------------------------'''
+@api.route('/api/v1.0/picam/release',methods=["POST"])
+def post_picam_release():
+  rt = {}
+  try:
+
+      helper.internalLogger.debug("Release setting request")
+      helper.internalLogger.debug("Processing new request:{0}...".format(request.json))
+      rt['result']='OK'     
+      data = request.get_json()
+      rt['data']=requestRelease(data)
+
+      rtjson=json.dumps(rt)
+
+  except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.error('Error: in release json')
+    helper.einternalLogger.exception(e)  
+    rtjson=jsonify({'result': 'KO'})
+    helper.internalLogger.debug("status failed")
+  return rtjson
 '''----------------------------------------------------------'''
 @api.route('/api/v1.0/picam/live',methods=["POST"])
 def post_picam_live():
@@ -606,6 +710,7 @@ def main(configfile):
   helper.einternalLogger.critical('picam-start -------------------------------')
 
   signal.signal(signal.SIGINT, signal_handler)
+  signal.signal(signal.SIGTERM, signal_handler)
 
   try:
     apiRestTask=threading.Thread(target=apirest_task,name="restapi")
@@ -617,6 +722,8 @@ def main(configfile):
       GLB_servo=ServoHandler({})
     else:
       GLB_servo=ServoHandler(GLB_configuration["servo"])
+
+    setLiveStatusAtBoot()
 
   except Exception as e:
     helper.internalLogger.critical("Error processing GLB_configuration json {0} file. Exiting".format(configfile))
@@ -632,6 +739,7 @@ def main(configfile):
        #helper.internalLogger.critical("Polling, nothing to poll yet")
        time.sleep(0.05)
        GLB_servo.refreshTrack()
+       GLB_servo.refreshPowerSaving()
   
      if not GLB_servo is None:
        GLB_servo.end()
