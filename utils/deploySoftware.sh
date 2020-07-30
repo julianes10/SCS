@@ -4,10 +4,11 @@
 echo "Here we go: $@"
 usage(){
   echo "------------------------------------------------------------------"
-	echo "Usage: $0 <fileSettings> (remote|egg|telegram) (local) [arduino][config])"
+	echo "Usage: $0 <fileSettings> (remote|egg|telegram) (local) [arduino][config][justcopy])"
   echo "  remote use ssh scp for deploying and requires PI_IPNAME/USER/PORT"
   echo "  egg just tenerate tarball"
   echo "  telegram push tarball to a bot as document, requires TELEGRAM_TOKEN/CHATID"
+  echo "  justcopy does just push tarball in remote in /tmp"
   echo "Settings must be define the following environment variables:"
   echo "  SERVICES_LIST service1 service2 ...."
   echo "  DEPLOY_FOLDER e.g /opt/project/...."
@@ -27,6 +28,7 @@ arg_ori="$3"
 
 deployConfig=0
 deployArduino=0
+justcopy=0
 for i in "$@"
 do
 case $i in
@@ -35,6 +37,9 @@ case $i in
     ;;
     arduino)
       deployArduino=1
+    ;;
+    justcopy)
+      justcopy=1
     ;;
 esac
 done
@@ -113,7 +118,7 @@ done
 dumpVersionInfo $VSW_FILE
 
 
-if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ] ; then
+if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest" == "egg" ]; then
   if [ "$arg_ori" == "local" ]; then
 
     # Cleaning
@@ -174,7 +179,7 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
     echo "# Preparing script to run remotely..." 
     echo "#-----------------------------------------------#" 
     echo "#!/bin/bash">$SS 
-    echo "exec > /tmp/eggSurprise.log 2>&1">>$SS
+    echo "exec > /var/log/eggSurprise.log 2>&1">>$SS
     echo "echo 'Starting into the egg... '">>$SS
     echo "date">>$SS
     echo "whoami">>$SS
@@ -209,6 +214,29 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
 
     echo "cp -raf * $DEPLOY_FOLDER">>$SS
 
+    ## COPY CHECKING
+    echo "echo 'Sometimes cp is crappy 0, lets try to stress a bit less...'">>$SS
+
+    file /opt/$DEPLOY_FOLDER/eggSurprise.sh | grep empty
+    rt=`echo $?`
+    if [ "$rt" == "0" ]; then
+      echo "echo 'Fuck off, copy is crappy, lets sync...'" >>$SS    
+    fi
+
+
+    echo "sync" >>$SS
+    echo "sleep 5" >>$SS
+
+    file /opt/$DEPLOY_FOLDER/eggSurprise.sh | grep empty
+    rt=`echo $?`
+    if [ "$rt" == "0" ]; then
+      echo "echo 'Fuck off, copy is still crappy, shit. Exiting'" >>$SS    
+      exit 99
+    fi
+    echo "echo 'After relax, there we go again'">>$SS
+
+
+
     echo "echo 'Enabling new services...'">>$SS
     for item in $SERVICES_LIST; do
       echo "cp -raf $item/install/*  /lib/systemd/system/">>$SS
@@ -239,14 +267,14 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
        #LET IT FOR DEBUGGING: "rm -rf $TMP_DEPLOY"     
     fi
 
-    if [ "$arg_dest" == "telegram" ]  ; then
+    if [ "$arg_dest" == "telegram" ] ; then
       echo "#-----------------------------------------------#"       
       echo "# Transfering the tarball egg via TELEGRAM..." 
       echo "#-----------------------------------------------#"      
       curl -F document=@"eggSurprise.tgz" https://api.telegram.org/bot$TELEGRAM_TOKEN/sendDocument?chat_id=$TELEGRAM_CHATID
     fi
 
-    if [ "$arg_dest" == "remote" ]  ; then
+    if [ "$arg_dest" == "remote" ] ; then
       echo "#-----------------------------------------------#"       
       echo "# Transfering the files via SSH..." 
       echo "#-----------------------------------------------#"      
@@ -254,7 +282,7 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
     fi
 
 
-    if [ "$arg_dest" == "remote" ]  ; then
+    if [ "$arg_dest" == "remote" ] &&  [ $justcopy -eq 0 ]  ; then
       echo "#-----------------------------------------------#"       
       echo "# Deploying remotely via SSH..." 
       echo "#-----------------------------------------------#"       
