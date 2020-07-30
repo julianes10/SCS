@@ -523,7 +523,8 @@ def updateOngoing(ongoing):
 '''----------------------------------------------------------'''
 def  mountBindMediaPath(mount=True):
   ### Mount in loop mediapath 
-  localpath=os.path.dirname(os.path.abspath(__file__))+"/static/tmp/"+os.path.basename(GLB_configuration["mediaPath"])
+  localpath=os.path.dirname(os.path.abspath(__file__))+
+      "/static" + GLB_configuration["mediaPath"]
 
   try:
         #Create local path
