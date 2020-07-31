@@ -441,6 +441,14 @@ def generateVideo(ongoing,cleanUp,closeOngoing):
   subprocess.call(['bash','-c',cmd]) 
 
 
+  if "videoReadyHookCmd" in GLB_configuration:
+    helper.internalLogger.debug("Executing video ready hook for {0}".format(pathFileVideo))
+    cmd=GLB_configuration["videoReadyHookCmd"].replace("PARAMETER_OUTFILE",pathFileVideo)
+    cmd=cmd.replace("PARAMETER_PROJECT",ongoing["name"])
+    helper.internalLogger.debug("hook CMD: {0}".format(cmd))
+    subprocess.call(['bash','-c',cmd]) 
+
+
   if cleanUp:
     if "name" in ongoing:
       cleanUpOngoing(ongoing["name"],True,False)
@@ -469,7 +477,7 @@ def takePhoto(outfile):
 '''----------------------------------------------------------'''
 def updateOngoing(ongoing):
 
-  helper.internalLogger.debug("updateOngoing: {0}".format(ongoing))
+  #DEBUG helper.internalLogger.debug("updateOngoing: {0}".format(ongoing))
   if not "interval" in ongoing:
     return False
   ongoing["status"]="ONGOING"
@@ -523,8 +531,7 @@ def updateOngoing(ongoing):
 '''----------------------------------------------------------'''
 def  mountBindMediaPath(mount=True):
   ### Mount in loop mediapath 
-  localpath=os.path.dirname(os.path.abspath(__file__))+
-      "/static" + GLB_configuration["mediaPath"]
+  localpath=os.path.dirname(os.path.abspath(__file__))+ "/static" + GLB_configuration["mediaPath"]
 
   try:
         #Create local path
@@ -566,6 +573,7 @@ def rebuildProjectsFromFileSystem():
                 helper.internalLogger.debug("File OUT {0}".format(os.path.join(dirpath, name)))
 
     setProjects(projects)
+
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
