@@ -225,7 +225,7 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
 
 
     echo "sync" >>$SS
-    echo "sleep 5" >>$SS
+    echo "sleep 2" >>$SS
 
     file /opt/$DEPLOY_FOLDER/eggSurprise.sh | grep empty
     rt=`echo $?`
