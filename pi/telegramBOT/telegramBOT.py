@@ -186,25 +186,29 @@ def eventTask(event):
         helper.internalLogger.debug("Known event, let's check subscribers... ")
         updateNbrOfTimesCounters(item)
 
-        #Sending event indication
-        sendTextMessageToSubscribers(item["subscribers"],"EVENT: " + event["name"])
 
         #Executing event, let's check if come with EXCLICIT items
-        if "text" in event:
+        if not "subscribers" in item:
+          helper.internalLogger.debug("Not any subscriber yet for this event {0}".format(event["name"]))
+        else:
+         #Sending event indication
+         sendTextMessageToSubscribers(item["subscribers"],"EVENT: " + event["name"])
+
+         if "text" in event:
             sendTextMessageToSubscribers(item["subscribers"],event["text"])
-        if "img" in event:
+         if "img" in event:
             sendImageMessageToSubscribers(item["subscribers"],event["img"])
-        if "video" in event:
+         if "video" in event:
             sendVideoMessageToSubscribers(item["subscribers"],event["video"])
-        if "filetext" in event:
+         if "filetext" in event:
             sendTextFileMessageToSubscribers(item["subscribers"],event["filetext"])
 
-        #Later, let's check if come with dynamic action associated
-        if "action" in event:
+         #Later, let's check if come with dynamic action associated
+         if "action" in event:
             runActionAndSendMessageToSubscribers(item["subscribers"],event["action"])
 
-        #Later, let's check if come with predefined action associated
-        if "action" in item:
+         #Later, let's check if come with predefined action associated
+         if "action" in item:
             runActionAndSendMessageToSubscribers(item["subscribers"],item["action"])
 
   except Exception as e:
