@@ -140,7 +140,6 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
       echo "## Customizing the service $item to $PROJECT_NAME... "
       sed -i -- "s/PROJECT_NAME/$PROJECT_NAME/g" $TMP_DEPLOY/$item/install/*
       sed -i -- "s/SERVICE_NAME/$item/g" $TMP_DEPLOY/$item/install/*
-      mv $TMP_DEPLOY/$item/install/*.service $TMP_DEPLOY/$item/install/$item.service     
       chmod 644 $TMP_DEPLOY/$item/install/*.service 
     done
 
