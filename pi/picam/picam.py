@@ -495,6 +495,42 @@ def render_home_tab(tab):
   return render_template('index.html', title="Live picam",st=st,display=display)
 
 '''----------------------------------------------------------'''
+@api.route('/api/v1.0/picam/photo',methods=["POST","GET"])
+def post_picam_photo():
+  rt={}
+  rt['result']='KO'  
+
+  try:
+    if request.json: 
+      helper.internalLogger.debug("new photo required")
+      helper.internalLogger.debug("Processing new request:...{0}".format(request.json))
+      data = request.get_json()
+    else:
+      rt['result']='OK'  
+      data={}   
+  
+    rt,f=requestPhoto(data)
+ 
+    ''' TODO if f==None:
+      rtjson=json.dumps(rt)
+      return rtjson
+    else:
+      pass
+      #TODO return imagen
+    '''
+
+
+  except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.error('Error: position json')
+    helper.einternalLogger.exception(e)  
+    rtjson=jsonify({'result': 'KO'})
+    helper.internalLogger.debug("status failed")
+
+  return json.dumps(rt)
+
+
+'''----------------------------------------------------------'''
 @api.route('/api/v1.0/picam/position',methods=["POST","GET"])
 def post_picam_position():
   rt = {}
@@ -571,6 +607,71 @@ def requestNewPosition(data):
 
       return GLB_servo.toDict()
 
+'''----------------------------------------------------------'''
+def requestPhoto(data):
+  global GLB_servo
+  rt={}
+  rt["result"]="KO"
+  rt2=""
+  # Set position if required and pantilt is enabled
+  backPosition=False
+  panBK=0
+  tiltBK=0
+  if "servo" in GLB_configuration:
+    if "enable" in GLB_configuration["servo"]:
+      if GLB_configuration["servo"]["enable"]:     
+        if "position" in data:
+          if "backPosition" in data["position"]:  
+            if data["position"]["backPosition"]:  
+              panBK=GLB_servo.pan
+              tiltBK=GLB_servo.tilt   
+              backPosition=True    
+              rt["backPositionData"]={"pan":panBK,"tilt":tiltBK}
+            rt["backPosition"]=backPosition
+        if "position" in data:
+          rttpos=requestNewPosition(data["position"])  
+        rt["positionData"]={"pan":GLB_servo.pan,"tilt":GLB_servo.tilt}         
+
+  # Get custom camara setup if required, else use defaults
+  cmd="UNKNOWN"
+  additionalFlags=""
+  outputFile="/tmp/photo"
+  if "photo" in GLB_configuration:
+    if "defaultCmd" in GLB_configuration["photo"]:
+      cmd=GLB_configuration["photo"]["defaultCmd"]
+    if "cmd" in data:
+      cmd=data["cmd"]
+    else:
+      if "defaultFlags" in GLB_configuration["photo"]:
+        flags=GLB_configuration["photo"]["defaultFlags"]
+      if "defaultFileOutput" in GLB_configuration["photo"]:
+        outputFile=GLB_configuration["photo"]["defaultFileOutput"]
+      if "customFlags" in data:
+        flags=data["customFlags"]
+      if "customOutputFile" in data:
+        outputFile=data["customOutputFile"]
+      cmd=cmd.replace("PARAMETER_FLAGS",flags)
+      cmd=cmd.replace("PARAMETER_FILEOUTPUT",outputFile)
+      rt2=outputFile
+      rt["cmd"]=cmd
+      rt["outputFile"]=outputFile
+     
+  # shoot!
+  try:
+    helper.internalLogger.debug("Shooting: {0}".format(cmd))
+    subprocess.check_output(cmd, shell=True)
+    rt["result"]="OK"
+  except subprocess.CalledProcessError as execution:
+    helper.internalLogger.debug("Return code: {0}. Output {1}".format(execution.returncode, execution.output))
+
+
+  # Back to position if required
+  if backPosition:
+    GLB_servo.setTilt(tiltBK)
+    GLB_servo.setPan(panBK)
+
+  # Return when image is ready with json ok or with image itself if not filenema is requested
+  return rt,rt2 
 
 '''----------------------------------------------------------'''
 def requestRelease(data):
