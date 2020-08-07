@@ -84,8 +84,9 @@ fi
 
 auxStr2=""
 if [  "$eventAdditionalVideo" != "NONE" ]; then
-  MP4Box -add $eventAdditionalVideo /tmp/eventVideo.mp4 > /dev/null 2>&1
-  auxStr2=", \"video\": \"/tmp/eventVideo.mp4 \" "
+  ofile=$(basename $eventAdditionalVideo)
+  MP4Box -add $eventAdditionalVideo /tmp/$ofile.mp4 > /dev/null 2>&1
+  auxStr2=", \"video\": \"/tmp/$ofile.mp4\" "
 fi
 
 auxStr3=""
