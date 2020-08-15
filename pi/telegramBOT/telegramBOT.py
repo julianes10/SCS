@@ -1125,7 +1125,27 @@ def main(configfile):
     tout=20
     if "pollingTimeout" in GLB_configuration:
       tout=GLB_configuration["pollingTimeout"] 
-    bot.polling(none_stop=True,timeout=tout)
+
+    
+    consecutiveConnectionErrors=0
+    latestConnectionErrorTimeStamp=0
+    while (True):
+      try:
+        bot.polling(none_stop=True,timeout=tout)
+      except requests.exceptions.ConnectionError as e: 
+        now=time.time()
+        if ((latestConnectionErrorTimeStamp + 60) <  now):
+          #too close 
+         consecutiveConnectionErrors=consecutiveConnectionErrors+1
+        e = sys.exc_info()[0]
+        helper.internalLogger.critical('Error: Exception in connection {0} with telegram.'.format(consecutiveConnectionErrors))
+        helper.einternalLogger.exception(e)
+      if consecutiveConnectionErrors > 10:
+        helper.internalLogger.critical('Error: Too much consecutive errors. Better restart full process')
+        raise
+      time.sleep(10)
+      helper.internalLogger.critical('Reloading bot variable...')
+      bot = telebot.TeleBot(GLB_configuration["hash"])
  
   except Exception as e:
     e = sys.exc_info()[0]
