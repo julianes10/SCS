@@ -1122,7 +1122,6 @@ def main(configfile):
     helper.internalLogger.debug("TeleBot periodic started")
 
 
-    helper.internalLogger.debug("Polling...")
     tout=20
     if "pollingTimeout" in GLB_configuration:
       tout=GLB_configuration["pollingTimeout"] 
@@ -1132,21 +1131,35 @@ def main(configfile):
     latestConnectionErrorTimeStamp=0
     while (True):
       try:
+        helper.internalLogger.debug("Polling...")
         bot.polling(none_stop=True,timeout=tout)
-      except requests.exceptions.ConnectionError as e: 
+      except (requests.exceptions.ConnectionError)  as e: 
+        ''' it seems useless, not always recover : 
         now=time.time()
         if ((latestConnectionErrorTimeStamp + 60) <  now):
           #too close 
          consecutiveConnectionErrors=consecutiveConnectionErrors+1
         e = sys.exc_info()[0]
-        helper.internalLogger.critical('Error: Exception in connection {0} with telegram.'.format(consecutiveConnectionErrors))
+        helper.internalLogger.critical('Error: Exception ConnectionError in connection {0} with telegram.'.format(consecutiveConnectionErrors))
         helper.einternalLogger.exception(e)
+        time.sleep(5)
+        helper.internalLogger.critical('Reloading bot variable after ConnectionError...')
+        bot = telebot.TeleBot(GLB_configuration["hash"])
+        '''
+        raise
+      except (requests.exceptions.ReadTimeout)  as e: 
+        now=time.time()
+        if ((latestConnectionErrorTimeStamp + 60) <  now):
+          #too close 
+         consecutiveConnectionErrors=consecutiveConnectionErrors+1
+        e = sys.exc_info()[0]
+        helper.internalLogger.critical('Error: Exception ReadTimeout in connection {0} with telegram.'.format(consecutiveConnectionErrors))
+        helper.einternalLogger.exception(e)
+        time.sleep(10)
+
       if consecutiveConnectionErrors > 10:
         helper.internalLogger.critical('Error: Too much consecutive errors. Better restart full process')
         raise
-      time.sleep(10)
-      helper.internalLogger.critical('Reloading bot variable...')
-      bot = telebot.TeleBot(GLB_configuration["hash"])
  
   except Exception as e:
     e = sys.exc_info()[0]
