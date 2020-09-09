@@ -294,7 +294,7 @@ def stopPlayer():
 '''----------------------------------------------------------'''
 def startPlayer(p):
     aux=configuration["browserLauncher"] + " " \
-      + p +  " " \
+      + '"'+ p +'"'+ " " \
       + str(configuration["playButton"]["x"]) + " " \
       + str(configuration["playButton"]["y"]) + " " \
       + str(configuration["loadTime"])

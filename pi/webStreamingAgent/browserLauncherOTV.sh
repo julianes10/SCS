@@ -97,9 +97,12 @@ sleep 2
 xdotool key F11
 sleep $tout
 
-#clickAround $x $y
+
 
 xdotool key space
+sleep 10
+xdotool mousemove $x $y
+xdotool click 1
 
 unclutter &
 
