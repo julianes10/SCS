@@ -93,8 +93,7 @@ $browser --start-maximized --pi $url &
 
 sleep 2
 xdotool search --name "Chromium" windowfocus key 'ctrl+r'
-sleep 2
-xdotool key F11
+
 sleep $tout
 
 
@@ -103,6 +102,9 @@ xdotool key space
 sleep 10
 xdotool mousemove $x $y
 xdotool click 1
+
+sleep 2
+xdotool key F11
 
 unclutter &
 
