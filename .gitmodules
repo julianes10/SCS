@@ -28,3 +28,6 @@
 [submodule "arduino/OneWire"]
 	path = arduino/OneWire
 	url = https://github.com/PaulStoffregen/OneWire.git
+[submodule "arduino/Scheduler"]
+	path = arduino/Scheduler
+	url = https://github.com/arduino-libraries/Scheduler.git
