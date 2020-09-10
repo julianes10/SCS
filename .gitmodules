@@ -7,3 +7,21 @@
 [submodule "arduino/Ultrasonic"]
 	path = arduino/Ultrasonic
 	url = https://github.com/ErickSimoes/Ultrasonic.git
+[submodule "arduino/Low-Power"]
+	path = arduino/Low-Power
+	url = https://github.com/rocketscream/Low-Power.git
+[submodule "arduino/Adafruit_Sensor"]
+	path = arduino/Adafruit_Sensor
+	url = https://github.com/adafruit/Adafruit_Sensor.git
+[submodule "arduino/u8glib"]
+	path = arduino/u8glib
+	url = https://github.com/olikraus/u8glib.git
+[submodule "arduino/Adafruit_SSD1306"]
+	path = arduino/Adafruit_SSD1306
+	url = https://github.com/adafruit/Adafruit_SSD1306.git
+[submodule "arduino/DHT-sensor-library"]
+	path = arduino/DHT-sensor-library
+	url = https://github.com/adafruit/DHT-sensor-library.git
+[submodule "arduino/Arduino-Temperature-Control-Library"]
+	path = arduino/Arduino-Temperature-Control-Library
+	url = https://github.com/milesburton/Arduino-Temperature-Control-Library.git
