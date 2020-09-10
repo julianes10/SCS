@@ -25,3 +25,6 @@
 [submodule "arduino/Arduino-Temperature-Control-Library"]
 	path = arduino/Arduino-Temperature-Control-Library
 	url = https://github.com/milesburton/Arduino-Temperature-Control-Library.git
+[submodule "arduino/OneWire"]
+	path = arduino/OneWire
+	url = https://github.com/PaulStoffregen/OneWire.git
