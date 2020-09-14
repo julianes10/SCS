@@ -15,6 +15,7 @@ usage(){
   echo "  PI_USER pi"
   echo "  PI_IPNAME pi32"
   echo "  PI_PORT 22"
+  echo "  CUSTOM_DEPLOY_SLEEP 2"
   echo "  TELEGRAM_TOKEN as token bot where tarball will be upload"
   echo "  TELEGRAM_CHATID with the user id on behalf this script upload the tarball"
   echo "------------------------------------------------------------------"
@@ -106,6 +107,12 @@ echo "   DEPLOY_FOLDER: $DEPLOY_FOLDER"
 echo "   PI_USER:       $PI_USER"
 echo "   PI_IPNAME:     $PI_IPNAME"
 echo "   PI_PORT:       $PI_PORT"
+echo "   CUSTOM_DEPLOY_SLEEP:       $CUSTOM_DEPLOY_SLEEP"
+
+
+if [ $CUSTOM_DEPLOY_SLEEP == ""]; then
+  $CUSTOM_DEPLOY_SLEEP=2
+fi
 
 #---------------------------------------------------------------------------
 
@@ -189,10 +196,12 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
        cat install/custom-install.pre.sh >> $SS
     fi
 
-    echo "echo 'Stopping services...'">>$SS
-    echo "systemctl stop $SERVICES_LIST" >>$SS
-    echo "echo 'Disabling services...'">>$SS
-    echo "systemctl disable $SERVICES_LIST" >>$SS
+    if [ "$SERVICES_LIST" != "" ]; then
+      echo "echo 'Stopping services...'">>$SS
+      echo "systemctl stop $SERVICES_LIST" >>$SS
+      echo "echo 'Disabling services...'">>$SS
+      echo "systemctl disable $SERVICES_LIST" >>$SS
+    fi
 
     if [ $deployConfig -eq 1 ]; then
        echo "echo 'Deploying config...'">>$SS
@@ -200,7 +209,9 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
     fi
 
     if [ $deployArduino -eq 1 ]; then
-       echo "avrdude -q -V -D -p atmega328p -c arduino -b $A_BAUD -P $A_TTY Makefile Makefile -U flash:w: arduino.hex:i">>$SS
+       echo "echo 'Deploying arduino...'">>$SS
+       echo "avrdude -q -V -D -p atmega328p -c arduino -b $A_BAUD -P $A_TTY Makefile Makefile -U flash:w:arduino.hex:i">>$SS
+       echo "echo Result: \$?">>$SS
     fi
 
 
@@ -214,7 +225,7 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
     echo "cp -raf * $DEPLOY_FOLDER">>$SS
 
     ## COPY CHECKING
-    echo "echo 'Sometimes cp is crappy 0, lets try to stress a bit less...'">>$SS
+    #echo "echo 'Sometimes cp is crappy 0, lets try to stress a bit less...'">>$SS
 
     file /opt/$DEPLOY_FOLDER/eggSurprise.sh | grep empty
     rt=`echo $?`
@@ -222,9 +233,10 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
       echo "echo 'Fuck off, copy is crappy, lets sync...'" >>$SS    
     fi
 
-
     echo "sync" >>$SS
-    echo "sleep 2" >>$SS
+    if [ "$CUSTOM_DEPLOY_SLEEP" != "" ]; then
+      echo "sleep $CUSTOM_DEPLOY_SLEEP" >>$SS
+    fi
 
     file /opt/$DEPLOY_FOLDER/eggSurprise.sh | grep empty
     rt=`echo $?`
@@ -235,16 +247,16 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
     echo "echo 'After relax, there we go again'">>$SS
 
 
-
-    echo "echo 'Enabling new services...'">>$SS
-    for item in $SERVICES_LIST; do
-      echo "cp -raf $item/install/*  /lib/systemd/system/">>$SS
-    done
-    echo "systemctl daemon-reload">>$SS
-    echo "systemctl enable $SERVICES_LIST">>$SS
-    echo "echo 'Starting new services...'">>$SS
-    echo "systemctl start  $SERVICES_LIST">>$SS
-
+    if [ "$SERVICES_LIST" != "" ]; then
+      echo "echo 'Enabling new services...'">>$SS
+      for item in $SERVICES_LIST; do
+        echo "cp -raf $item/install/*  /lib/systemd/system/">>$SS
+      done
+      echo "systemctl daemon-reload">>$SS
+      echo "systemctl enable $SERVICES_LIST">>$SS
+      echo "echo 'Starting new services...'">>$SS
+      echo "systemctl start  $SERVICES_LIST">>$SS
+    fi
 
     echo "echo 'Executing custom-install-post...'">>$SS
     if [ -f install/custom-install.post.sh ];then
@@ -275,7 +287,7 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
 
     if [ "$arg_dest" == "remote" ] ; then
       echo "#-----------------------------------------------#"       
-      echo "# Transfering the files via SSH..." 
+      echo "# Transfering the files via SSH... $PI_PORT $TMP_DEPLOY $PI_USER@$PI_IPNAME:$TMP_DEPLOY" 
       echo "#-----------------------------------------------#"      
       scp -r -P $PI_PORT $TMP_DEPLOY $PI_USER@$PI_IPNAME:$TMP_DEPLOY
     fi
@@ -285,12 +297,20 @@ if [ "$arg_dest" == "telegram" ] || [ "$arg_dest" == "remote" ] || [ "$arg_dest"
       echo "#-----------------------------------------------#"       
       echo "# Deploying remotely via SSH..." 
       echo "#-----------------------------------------------#"       
-      ssh -p $PI_PORT pi@$PI_IPNAME "cd $TMP_DEPLOY; sudo ./eggSurprise.sh"
+      ssh -p $PI_PORT pi@$PI_IPNAME "cd $TMP_DEPLOY; sudo ./eggSurprise.sh"     
+      echo "# # # # # # # # # EGG  LOGS # # # # # # # # # # #" 
+      ssh -p $PI_PORT pi@$PI_IPNAME "cat  /var/log/eggSurprise.log"
+      echo "# # # # # # # # # # # # # # # # # # # # # # # # #" 
 
-      echo "#-----------------------------------------------#"       
-      echo "# Checking service status via SSH..." 
-      echo "#-----------------------------------------------#"       
-      ssh -p $PI_PORT pi@$PI_IPNAME "systemctl status $SERVICES_LIST -n 0"
+
+      if [ "$SERVICES_LIST" != "" ]; then
+        echo "#-----------------------------------------------#"       
+        echo "# Checking service status via SSH..." 
+        echo "#-----------------------------------------------#"       
+        ssh -p $PI_PORT pi@$PI_IPNAME "systemctl status $SERVICES_LIST -n 0"
+      fi
+
+
     fi
   else
     echo "ERROR: no extra option selected for deployed remotely"
