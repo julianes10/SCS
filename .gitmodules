@@ -22,12 +22,9 @@
 [submodule "arduino/DHT-sensor-library"]
 	path = arduino/DHT-sensor-library
 	url = https://github.com/adafruit/DHT-sensor-library.git
-[submodule "arduino/Arduino-Temperature-Control-Library"]
-	path = arduino/Arduino-Temperature-Control-Library
-	url = https://github.com/milesburton/Arduino-Temperature-Control-Library.git
-[submodule "arduino/OneWire"]
-	path = arduino/OneWire
-	url = https://github.com/PaulStoffregen/OneWire.git
 [submodule "arduino/Scheduler"]
 	path = arduino/Scheduler
 	url = https://github.com/arduino-libraries/Scheduler.git
+[submodule "arduino/arduino"]
+	path = arduino/arduino
+	url = https://github.com/jazzycamel/arduino.git
