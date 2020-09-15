@@ -2,16 +2,16 @@
 #define THSEM_h
 
 #include "Arduino.h"
-#include "thsem.h"
+#include "DHTsensor.h"
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
 
-class thsem
+class DHTsensor
 {
  public:
 
-  thsem();
+  DHTsensor();
   int setup(unsigned int datapin);
   int refresh();
   float getTemperature(){return t;}

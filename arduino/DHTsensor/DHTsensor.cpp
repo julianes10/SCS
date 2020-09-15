@@ -1,15 +1,15 @@
 #include <Arduino.h>
 
-#include "thsem.h"
+#include "DHTsensor.h"
 
-thsem::thsem()
+DHTsensor::DHTsensor()
 {
   dht=0;
   t=0;
   h=0;
 }
 
-int thsem::setup(unsigned int datapin)
+int DHTsensor::setup(unsigned int datapin)
 {
   dht=new DHT(datapin, DHT22); //// Initialize DHT sensor for normal 16mhz Arduino
   if (dht)
@@ -18,7 +18,7 @@ int thsem::setup(unsigned int datapin)
     return -1;
   return 0;
 }
-int thsem::refresh()
+int DHTsensor::refresh()
 {
   //Read data and store it to variables hum and temp
   h = dht->readHumidity();
