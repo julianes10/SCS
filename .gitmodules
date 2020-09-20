@@ -28,6 +28,3 @@
 [submodule "arduino/arduino"]
 	path = arduino/arduino
 	url = https://github.com/jazzycamel/arduino.git
-[submodule "arduino/NonBlockingRTTTL"]
-	path = arduino/NonBlockingRTTTL
-	url = https://github.com/end2endzone/NonBlockingRTTTL.git
