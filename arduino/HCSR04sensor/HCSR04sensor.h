@@ -10,6 +10,8 @@ class HCSR04sensor {
     HCSR04sensor(int trigger, int echo, int interrupt, int max_dist=200);   
     void setup();
     void trigger();
+    int refresh();
+
     bool isFinished(){ return _finished; }
     unsigned int getOngoingDistance();
     unsigned int getLatestDistanceRead() {return _latestRead; }

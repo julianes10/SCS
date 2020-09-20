@@ -48,3 +48,14 @@ void HCSR04sensor::_echo_isr(){
   }   
 }
 
+int HCSR04sensor::refresh()
+{
+  int rt=-1;
+  if (_finished) {
+    rt=getOngoingDistance();  
+    trigger(); 
+  }
+  return rt;
+}
+
+
