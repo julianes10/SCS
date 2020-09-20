@@ -65,6 +65,14 @@ void LSEM::refresh(void)
   //FastLED.show();-- do in main loop, affecting all instances
 }
 
+
+//------------------------------------------------  
+int LSEM::processCommands(const char PROGMEM *inputString)
+{
+strcpy_P(_auxBuff,inputString);
+
+return processCommands(_auxBuff);
+}
 //------------------------------------------------
 int LSEM::processCommands(char *inputString)
 {

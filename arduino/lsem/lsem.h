@@ -62,6 +62,7 @@ class LSEM
 
   void reset();
   int processCommands(char *inputString);
+  int processCommands(const char PROGMEM *inputString);
   bool isIdle(){return ((_mode==LS_MODE_ZERO) && (_queue.count()==0)); }
 
   void callbackTimeout();
@@ -75,6 +76,7 @@ class LSEM
   void setPattern(uint8_t pos,CRGB *p);
 
  private:
+  char _auxBuff[100];
   char _ProtocolId;
   CRGB *_leds;
   CRGB *_patternsList[MAX_PATTERNS];
