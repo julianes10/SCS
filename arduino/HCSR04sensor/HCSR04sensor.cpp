@@ -3,12 +3,13 @@
 
 
 HCSR04sensor *HCSR04sensor::_instance(NULL);
-
-HCSR04sensor::HCSR04sensor(int trigger, int echo, int interrupt, int max_dist)
+HCSR04sensor::HCSR04sensor(int trigger, int echo, int interrupt, int windowSize, int max_dist=200)
     : _trigger(trigger), _echo(echo), _int(interrupt), _max(max_dist), _finished(false)
 {
   if(_instance==0) _instance=this;   
   _latestRead=0; 
+  _latestMedian=0;
+  medianFilter= new MedianFilter<int>(windowSize);
 }
 
 void HCSR04sensor::setup(){
@@ -25,10 +26,12 @@ void HCSR04sensor::trigger(){
   digitalWrite(_trigger, LOW);  
 }
 
-unsigned int HCSR04sensor::getOngoingDistance(){
-  unsigned int rt=0;
+int HCSR04sensor::getOngoingDistance(){
+  int rt=-1;
   if (_finished){
     _latestRead=(_end-_start)/(58);
+    rt= _latestRead;
+		_latestMedian = medianFilter->AddValue(rt);
     rt= _latestRead;
   }
   return rt;
