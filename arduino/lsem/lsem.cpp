@@ -66,21 +66,25 @@ void LSEM::refresh(void)
 }
 
 
-//------------------------------------------------  
-int LSEM::processCommands(const char PROGMEM *inputString)
-{
-strcpy_P(_auxBuff,inputString);
-
-return processCommands(_auxBuff);
-}
 //------------------------------------------------
-int LSEM::processCommands(char *inputString)
+int LSEM::processCommands(char *input,bool flash=false)
+
 {
+  char *inputString;
   int index=0,readbytes=0;
   int len=0; 
   int rt=0;
   int processedOK=0;
   //Serial.print(F("DEBUG:")); Serial.println(inputString);
+  if (flash){
+    strncpy_P(_auxBuff,input,MAX_LSEM_LOCAL_BUFF);
+    inputString=_auxBuff;
+  }
+  else {
+    inputString=input;
+  }
+
+
   len=strlen(inputString);
   while ((len-index) >0)
   { 

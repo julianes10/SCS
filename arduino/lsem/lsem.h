@@ -8,6 +8,7 @@
 
 #define NUM_MAX_QUEUE 5
 #define MAX_PATTERNS  10
+#define MAX_LSEM_LOCAL_BUFF 100
 //-------------
 /*
 EM SERIAL PROTOCOL, INEFFICIENT,UNSECURE, BUT EASY TO READ, QUICK TO IMPLEMENT AND TEST:
@@ -61,8 +62,7 @@ class LSEM
   void refresh();
 
   void reset();
-  int processCommands(char *inputString);
-  int processCommands(const char PROGMEM *inputString);
+  int processCommands(char *input,bool flash);
   bool isIdle(){return ((_mode==LS_MODE_ZERO) && (_queue.count()==0)); }
 
   void callbackTimeout();
@@ -76,7 +76,7 @@ class LSEM
   void setPattern(uint8_t pos,CRGB *p);
 
  private:
-  char _auxBuff[100];
+  char _auxBuff[MAX_LSEM_LOCAL_BUFF];
   char _ProtocolId;
   CRGB *_leds;
   CRGB *_patternsList[MAX_PATTERNS];
