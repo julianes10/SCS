@@ -31,3 +31,6 @@
 [submodule "arduino/Arduino-MedianFilter"]
 	path = arduino/Arduino-MedianFilter
 	url = https://github.com/luisllamasbinaburo/Arduino-MedianFilter.git
+[submodule "arduino/NonBlockingRTTTL"]
+	path = arduino/NonBlockingRTTTL
+	url = https://github.com/julianes10/NonBlockingRTTTL.git
