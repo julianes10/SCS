@@ -28,9 +28,6 @@
 [submodule "arduino/arduino"]
 	path = arduino/arduino
 	url = https://github.com/jazzycamel/arduino.git
-[submodule "arduino/NonBlockingRTTTL"]
-	path = arduino/NonBlockingRTTTL
-	url = https://github.com/julianes10/NonBlockingRTTTL.git
 [submodule "arduino/Arduino-MedianFilter"]
 	path = arduino/Arduino-MedianFilter
 	url = https://github.com/luisllamasbinaburo/Arduino-MedianFilter.git
