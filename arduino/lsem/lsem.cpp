@@ -67,7 +67,7 @@ void LSEM::refresh(void)
 
 
 //------------------------------------------------
-int LSEM::processCommands(char *input,bool flash=false)
+int LSEM::processCommands(const char *input,bool flash)
 
 {
   char *inputString;

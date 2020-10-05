@@ -62,7 +62,7 @@ class LSEM
   void refresh();
 
   void reset();
-  int processCommands(char *input,bool flash);
+  int processCommands(const char *input,bool flash=false);
   bool isIdle(){return ((_mode==LS_MODE_ZERO) && (_queue.count()==0)); }
 
   void callbackTimeout();
