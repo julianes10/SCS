@@ -34,3 +34,9 @@
 [submodule "arduino/NonBlockingRTTTL"]
 	path = arduino/NonBlockingRTTTL
 	url = https://github.com/julianes10/NonBlockingRTTTL.git
+[submodule "arduino/RTClib"]
+	path = arduino/RTClib
+	url = https://github.com/adafruit/RTClib.git
+[submodule "arduino/Adafruit-GFX-Library"]
+	path = arduino/Adafruit-GFX-Library
+	url = https://github.com/adafruit/Adafruit-GFX-Library.git
