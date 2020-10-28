@@ -8,8 +8,10 @@ HCSR04sensor::HCSR04sensor(int trigger, int echo, int interrupt, int windowSize,
 {
   if(_instance==0) _instance=this;   
   _latestRead=0; 
+#ifdef HCSR04_ENABLE_MEDIANFILTER    
   _latestMedian=0;
   medianFilter= new MedianFilter<int>(windowSize);
+#endif
 }
 
 void HCSR04sensor::setup(){
@@ -31,13 +33,15 @@ int HCSR04sensor::getOngoingDistance(){
   if (_finished){
     _latestRead=(_end-_start)/(58);
     rt= _latestRead;
+#ifdef HCSR04_ENABLE_MEDIANFILTER    
 		_latestMedian = medianFilter->AddValue(rt);
-    rt= _latestRead;
+#endif
   }
   return rt;
 }
 
 void HCSR04sensor::_echo_isr(){
+
   HCSR04sensor* _this=HCSR04sensor::instance();
   
   switch(digitalRead(_this->_echo)){
