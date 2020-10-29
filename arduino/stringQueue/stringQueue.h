@@ -1,10 +1,21 @@
+/***********************************/
+/* CONDITIONAL COMPILATION ITEMS   */
+// STRINGQUEUE_ENABLE_10
+// STRINGQUEUE_ENABLE_3
+/***********************************/
+
 #ifndef STRINGQUEUE_h
 #define STRINGQUEUE_h
 
 #include "Arduino.h"
 
-
+#ifdef STRINGQUEUE_ENABLE_10
+#define MAX_STRINGS_IN_QUEUE   10
+#elif STRINGQUEUE_ENABLE_3
+#define MAX_STRINGS_IN_QUEUE   3
+#else
 #define MAX_STRINGS_IN_QUEUE   7
+#endif
 
 class stringQueue
 {

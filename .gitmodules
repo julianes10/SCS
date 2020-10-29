@@ -3,7 +3,7 @@
 	url = https://github.com/FastLED/FastLED.git
 [submodule "arduino/SimpleTimer"]
 	path = arduino/SimpleTimer
-	url = https://github.com/schinken/SimpleTimer.git
+	url = https://github.com/julianes10/SimpleTimer.git
 [submodule "arduino/Ultrasonic"]
 	path = arduino/Ultrasonic
 	url = https://github.com/ErickSimoes/Ultrasonic.git
@@ -49,3 +49,6 @@
 [submodule "arduino/U8g2_Arduino"]
 	path = arduino/U8g2_Arduino
 	url = https://github.com/olikraus/U8g2_Arduino.git
+[submodule "arduino/arduino-DHT"]
+	path = arduino/arduino-DHT
+	url = https://github.com/julianes10/arduino-DHT.git
