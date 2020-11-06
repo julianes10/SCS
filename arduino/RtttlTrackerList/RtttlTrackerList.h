@@ -1,10 +1,15 @@
+/***********************************/
+/* CONDITIONAL COMPILATION ITEMS   */
+// RTTTLTRACKERLIST_ENABLE_RANDOM
+// RTTTLTRACKERLIST_DEBUG
+/***********************************/
+
 #ifndef RtttlTrackerList_H
 #define RtttlTrackerList_H
 
 #include <Arduino.h>
 
 
-//#define RTTTLTRACKERLIST_DEBUG
 
 
 typedef struct  {
@@ -19,7 +24,9 @@ class RtttlTrackerList {
     RtttlTrackerList(){};
     void setup( RtttlTrackerItem ousideTracker[],int maxsize);
     void addItem(const char *song);
+#ifdef RTTTLTRACKERLIST_ENABLE_RANDOM
     const char *getRandomItem(bool nrepeat,bool reload);
+#endif
     const char *getOrderedItem(bool reload);
     void resetTrackUsed(); 
   private:

@@ -34,7 +34,7 @@ void RtttlTrackerList::addItem(const char *song)
     }
   }
 }
-
+#ifdef RTTTLTRACKERLIST_ENABLE_RANDOM
 const char *RtttlTrackerList::getRandomItem(bool nrepeat=true,bool reload=true)
 {
   #ifdef RTTTLTRACKERLIST_DEBUG
@@ -62,6 +62,7 @@ const char *RtttlTrackerList::getRandomItem(bool nrepeat=true,bool reload=true)
      return getRandomItem(nrepeat,reload);
    }
 }
+#endif 
 
 const char *RtttlTrackerList::getOrderedItem(bool reload=true)
 {
