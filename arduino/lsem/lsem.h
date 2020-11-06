@@ -1,6 +1,6 @@
 /***********************************/
 /* CONDITIONAL COMPILATION ITEMS   */
-// LSEM_ENABLE_LIGHT
+// LSEM_ENABLE_PROTOCOL_LIGHT
 // LSEM_DEBUG
 /***********************************/
 
@@ -9,16 +9,17 @@
 
 #include "Arduino.h"
 #include "FastLED.h"
+
+
+#ifdef LSEM_ENABLE_PROTOCOL
+
 #include "SimpleTimer.h"
-#include "stringQueue.h"
 
-
-#ifdef LSEM_ENABLE_LIGHT
-#define NUM_MAX_QUEUE 2
+#ifdef LSEM_ENABLE_PROTOCOL_LIGHT
 #define MAX_PATTERNS  0
 #define MAX_LSEM_LOCAL_BUFF 20
 #else
-#define NUM_MAX_QUEUE 5
+#include "stringQueue.h"
 #define MAX_PATTERNS  10
 #define MAX_LSEM_LOCAL_BUFF 100
 #endif
@@ -38,23 +39,27 @@ TYPES:
                           //    e.g 0300, 30 seconds. Default 0 NO timeout
   #define LS_PAUSE   'P'  // (pause)   with VALUE:MS in 4 ascii in decs of seconds filled with zeors 
                           //    e.g 4000, 4  seconds. Default 0 no pause
-  #define LS_ENQUEUE 'Q'  // Enqueue the rest of the line commands to play when timeout current mode.
 
+#ifdef LSEM_DEBUG
   #define LS_DEBUG_ON  'D'// Enable debug
   #define LS_DEBUG_OFF 'd' // Disable debug
   #define LS_STATUS_REQ 'S'  // Ask for status information over this serial protocol answer TODO spec output
+#endif
 
-
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
   #define LS_PERCENTAGE 'G'  // (percentage) 0-100%  4 ascii  filled with zeors 
                              //    e.g 0050, 50 %. Default 0 no impact.
+  #define LS_ENQUEUE 'Q'  // Enqueue the rest of the line commands to play when timeout current mode.
+
 #endif
+
+
 
   #define LS_MODE    'M'  // (mode) with <SUBTYPE>
     #define LS_MODE_ZERO           '0'  // no mode. All leds forced to black. Standby.
     #define LS_MODE_COLOR          'A'  // (all) setup all leds with general settings: C,T,P.
     #define LS_MODE_NOISE          'N'  //random leds random color. With general settings: T,P
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
     #define LS_MODE_ROLLING_TEST   'T'  // rolling 3 test colors. With general settings: T,P.
     #define LS_MODE_RROLLING_TEST  't'  // reverse rolling 3 test colors. With general settings: T,P.
     #define LS_MODE_ROLLING_COLOR  'C'  // rolling bit With general settings: C,T,P.
@@ -75,16 +80,30 @@ TYPES:
 #endif
 
 
+#endif
+
 class LSEM
 {
  public:
+  void setAllLeds(CRGB color){_setAllLeds(color);}
+#ifdef LSEM_ENABLE_PROTOCOL
   LSEM(CRGB *ls,uint8_t m, timer_callback cbp,timer_callback cbt);
+#else
+  LSEM(CRGB *ls,uint8_t m);
+#endif
 
+#ifdef LSEM_ENABLE_PROTOCOL
   void refresh();
 
   void reset();
   int processCommands(const char *input,bool flash=false);
+
+#ifdef LSEM_ENABLE_PROTOCOL_LIGHT
+  bool isIdle(){return ((_mode==LS_MODE_ZERO)); }
+#else
   bool isIdle(){return ((_mode==LS_MODE_ZERO) && (_queue.count()==0)); }
+#endif
+
 
   void callbackTimeout();
   void callbackPause();
@@ -92,22 +111,28 @@ class LSEM
   bool getDebug()       {return _debug;}
   void setDebug(bool b);
 #endif
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
   void customProtocolId(char p){_ProtocolId=p;}
   void setPattern(uint8_t pos,CRGB *p);
 #endif
+
+#endif
+
+
  private:
+
+  CRGB *_leds;
+  void _setAllLeds(CRGB color);
+  uint8_t _NUM_LEDS;
+#ifdef LSEM_ENABLE_PROTOCOL
   char _auxBuff[MAX_LSEM_LOCAL_BUFF];
   char _ProtocolId;
-  CRGB *_leds;
 
-  stringQueue _queue;
+
   char _mode;
   uint8_t _one;
   CRGB _color; //C
   SimpleTimer _timers;
-
-  uint8_t _NUM_LEDS;
 
   int  _timeout; //T
   int  _pause; //P
@@ -122,7 +147,8 @@ class LSEM
   bool _debug;
 #endif
 
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
+  stringQueue _queue;
   CRGB *_patternsList[MAX_PATTERNS];
   uint8_t _maxPatterns;
   uint8_t _currentPattern;  
@@ -138,19 +164,20 @@ class LSEM
   void _setLed(uint8_t led);
   void _setTimeout(uint16_t t);
   void _setPause(uint16_t p);
-  void _resetQueue();
+
   void _fullReset();
   uint8_t _readSerialCommand(char *cmd,int *pok);
   void _doColor();
   void _doNoise();
-  void _setAllLeds(CRGB color);
+
   uint32_t _readColor(char *cmd);
 
 #ifdef LSEM_DEBUG
   void _debugInfo();
 #endif 
 
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
+  void _resetQueue();
   void _setMaxPatterns(uint8_t p){ _maxPatterns=p; }
   void _setPercentage(uint16_t p);
   void _doRollingTest(bool reverse=false);
@@ -161,6 +188,10 @@ class LSEM
   void _doPatterns();
   void _setPatternDef(uint8_t pos, uint8_t mode, CRGB *p, int max);
 #endif
+
+#endif
+
+
 };
 
 //extern class LSEM LSEM;

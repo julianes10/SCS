@@ -6,22 +6,38 @@
 
 #define RIGHT 0
 #define LEFT  1
-
-
-
 //------------------------------------------------
 //------------------------------------------------
 //------------------------------------------------
+
+#ifdef LSEM_ENABLE_PROTOCOL
 LSEM::LSEM(CRGB *ls,uint8_t m,timer_callback cbp,timer_callback cbt)
+#else
+LSEM::LSEM(CRGB *ls,uint8_t m)
+#endif
 {
   _NUM_LEDS=m;
   _leds=ls;
-  _fullReset();
   randomSeed(analogRead(0));
+#ifdef LSEM_ENABLE_PROTOCOL
+  _fullReset(); 
   _cbp=cbp;
   _cbt=cbt;
   _ProtocolId=TYPE_LED;
+#endif 
 }
+
+//------------------------------------------------
+void LSEM::_setAllLeds(CRGB color)
+{
+  // Turn the LED on, then pause
+  for (int i=0;i<_NUM_LEDS;i++)
+  {
+    _leds[i] = color;
+  }
+}
+
+#ifdef LSEM_ENABLE_PROTOCOL
 //------------------------------------------------
 void LSEM::callbackTimeout(void)
 {
@@ -38,6 +54,9 @@ void LSEM::refresh(void)
 {
   _timers.run();
 
+
+
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
   if (_mode==LS_MODE_ZERO) {
     if (_queue.count()>0)
     {
@@ -48,11 +67,12 @@ void LSEM::refresh(void)
       _queue.pop();
     }
   }
+#endif
 
   switch(_mode) {
     case LS_MODE_COLOR:          _doColor();         break;
     case LS_MODE_NOISE:          _doNoise();         break;
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
     case LS_MODE_ROLLING_TEST:   _doRollingTest();   break;
     case LS_MODE_RROLLING_TEST:  _doRollingTest(true);   break;
     case LS_MODE_ROLLING_COLOR:  _doRollingColor(_color); break;
@@ -139,7 +159,7 @@ void LSEM::reset(void)
   _timeout=0; //T
   _pause=0;   //P
 
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
   _rollingTurn=0;
   _rollingTestColor=0x0000FF;
   _direction=RIGHT;
@@ -161,7 +181,7 @@ void LSEM::setDebug(bool b)
   else   Serial.println(F("DEBUG: Debug is disable"));
 }
 #endif
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
 //------------------------------------------------
 void LSEM::setPattern(uint8_t pos,CRGB *p)
 {
@@ -262,6 +282,7 @@ uint8_t LSEM::_readSerialCommand(char *cmd,int *pok) {
       _setPause((uint16_t)strtol(&cmd[index],kk,10));
       index+=4;
       break;
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
     case LS_ENQUEUE:
       _queue.push(&cmd[index]);
 #ifdef LSEM_DEBUG
@@ -269,6 +290,8 @@ uint8_t LSEM::_readSerialCommand(char *cmd,int *pok) {
 #endif
       index+=len;
       break;
+#endif
+
 #ifdef LSEM_DEBUG
     case LS_DEBUG_ON:
       setDebug(true);
@@ -287,7 +310,7 @@ uint8_t LSEM::_readSerialCommand(char *cmd,int *pok) {
       switch(m){
           case LS_MODE_COLOR:
           case LS_MODE_NOISE:
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
           case LS_MODE_RAINBOW:
           case LS_MODE_NOISE_COLOR:
           case LS_MODE_ROLLING_TEST:
@@ -324,7 +347,7 @@ uint8_t LSEM::_readSerialCommand(char *cmd,int *pok) {
               goto exitingCmd;
       }
       break;
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
     case LS_PERCENTAGE:
       if ((len-(index+4)) <0) {
 #ifdef LSEM_DEBUG
@@ -399,14 +422,18 @@ void LSEM::_fullReset(void)
 {
   //Serial.print(F("DEBUG:LSEM::fullReset"));
   reset();
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
   _resetQueue();
+#endif
 }
 //------------------------------------------------
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
 void LSEM::_resetQueue(void)
 {
   //Serial.print(F("DEBUG:LSEM::resetQueue"));
   _queue.clearQueue();
 }
+#endif
 
 //------------------------------------------------
 void LSEM::_setTimeout(uint16_t t)
@@ -428,7 +455,7 @@ void LSEM::_setTimeout(uint16_t t)
 #endif
   }
 }
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
 //------------------------------------------------
 void LSEM::_setPercentage(uint16_t p)
 {
@@ -490,24 +517,16 @@ void LSEM::_setLed(uint8_t led)
 }
 
 //------------------------------------------------
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
 void LSEM::_doOne()
 {
   _leds[_one] = CRGB::White;
 }
 #endif
-//------------------------------------------------
-void LSEM::_setAllLeds(CRGB color)
-{
-  // Turn the LED on, then pause
-  for (int i=0;i<_NUM_LEDS;i++)
-  {
-    _leds[i] = color;
-  }
-}
+
 
 //------------------------------------------------
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
 void LSEM::_doRollingColor(CRGB color,bool reverse,bool knightRider)
 {
    if (!_pauseExpired) return;
@@ -565,7 +584,7 @@ void LSEM::_doColor()
   _setAllLeds(_color);
 }
 //------------------------------------------------
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
 void LSEM::_doRainbow()
 { //TODO
 }
@@ -582,7 +601,7 @@ void LSEM::_doNoise()
 }
 
 //------------------------------------------------
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
 void LSEM::_doNoiseColor()
 { 
   if (!_pauseExpired) return;
@@ -622,10 +641,10 @@ void LSEM::_debugInfo()
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("T"); Serial.print(_timeout);
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("P"); Serial.print(_pause);
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("C"); Serial.print((long int)_color);
-#ifndef LSEM_ENABLE_LIGHT
+#ifndef LSEM_ENABLE_PROTOCOL_LIGHT
   Serial.print(":");Serial.print(_ProtocolId);Serial.print(LS_PERCENTAGE); Serial.print(_percentage);
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("MP"); Serial.print((uint8_t)_maxPatterns);
-#endif
+
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("q"); Serial.print(_queue.count());
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("h"); Serial.print(_queue.getHead());
   Serial.print(":");Serial.print(_ProtocolId);Serial.print("t"); Serial.print(_queue.getTail());
@@ -636,7 +655,9 @@ void LSEM::_debugInfo()
      Serial.print(str);
     }
   }
+#endif
   Serial.println("");
 }
+#endif
 #endif
 
