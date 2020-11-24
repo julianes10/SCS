@@ -20,8 +20,8 @@ GLB_latestChannelOn=""
 def getVersion():
    rt={}
    try:
-     if "vsw-file" in configuration:
-       with open(configuration["vsw-file"]) as json_data:
+     if "vsw-file" in GLB_configuration:
+       with open(GLB_configuration["vsw-file"]) as json_data:
           rt=json.load(json_data)
    except Exception as e:
         helper.internalLogger.error('no vsw json data')
@@ -32,6 +32,7 @@ def getVersion():
 #Code copy and adapted from https://github.com/adafruit/Adafruit_Python_DHT/blob/master/examples/simpletest.py
 
 
+from flask import Flask, render_template,redirect
 from flask import Flask, jsonify,abort,make_response,request, url_for
 
 from helper import *
@@ -83,8 +84,8 @@ class TrackerStats:
     self.updateTimings(False)
 
   def updateKPIs(self):
-    self.latestCPU=getKPI(configuration["kpi"]["cpu"]["cmd"])
-    lastRxBytesNew=getKPI(configuration["kpi"]["bwKbps"]["cmd"])
+    self.latestCPU=getKPI(GLB_configuration["kpi"]["cpu"]["cmd"])
+    lastRxBytesNew=getKPI(GLB_configuration["kpi"]["bwKbps"]["cmd"])
     now=time.time()
     if self.lastRxBytes==0:
       self.latestBW = 0
@@ -128,15 +129,66 @@ class TrackerStats:
         helper.einternalLogger.exception(e)  
 
 
+
+def listFiles2Array(basedir,extension):
+  import os
+  ext = "." + extension 
+  target_files = []
+  # Select only files with the ext extension
+  target_files = [i for i in os.listdir(basedir) if os.path.splitext(i)[1] == ext]
+  return target_files
+
+
+def getStatusDisplayMedia():
+  helper.internalLogger.debug("status getStatusDisplayMedia")
+  rt = {}
+  rt['media-photo']={}
+  rt['media-video']={}
+  rt['status']={}
+  try:
+    rt['media-photo']=listFiles2Array(GLB_configuration["media-photo"],"jpg")
+    rt['media-video']=listFiles2Array(GLB_configuration["media-video"],"mp4")
+
+    file = open(GLB_configuration["displayStatus"])
+    rt['status']=file.read()
+    file.close()
+
+  except Exception as e:
+        e = sys.exc_info()[0]
+        helper.internalLogger.error('Some exception getting displaymedia files')
+        helper.einternalLogger.exception(e)  
+
+
+
+
+  return rt
 '''----------------------------------------------------------'''
 '''----------------      API REST         -------------------'''
 '''----------------------------------------------------------'''
-api = Flask("api")
+
+api = Flask("api",template_folder="templates",static_folder='static_webStreamingAgent')
+api.jinja_env.filters['tojson_pretty'] = to_pretty_json
+
+'''----------------------------------------------------------'''
+@api.route('/',methods=["GET", "POST"])
+@api.route('/webStreamingAgent/',methods=["GET", "POST"])
+def webStreamingAgent_home():
+    if request.method == 'POST':
+      helper.internalLogger.debug("Processing new request from a form...{0}".format(request.form))
+      form2 = request.form.to_dict()
+      helper.internalLogger.debug("TODO Processing new request from a form2...{0}".format(form2))   
+    
+    st=getStatus()
+    rt=render_template('index.html', title="web streaming agent Site",status=st)
+    return rt
 
 
+'''----------------------------------------------------------'''
 @api.route('/api/v1.0/webStreamingAgent/status', methods=['GET'])
 def get_webStreaming_status():
+    return json.dumps(getStatus())
 
+def getStatus():
   global GLB_latestChannelOn
 
   helper.internalLogger.debug("status required")
@@ -165,25 +217,28 @@ def get_webStreaming_status():
       #state 0x40001 [NTSC 4:3], 720x480 @ 60.00Hz, interlaced
 
       #Now tracker information
-      if "trackFile" in configuration:     
+      if "trackFile" in GLB_configuration:     
         rt['tracking']=what2track()
       else:
         rt['tracking']={}
 
       rt['playing']=GLB_latestChannelOn
 
+
+      rt['displayMedia']=getStatusDisplayMedia()
+
       helper.internalLogger.debug("status {0}".format(rt))
 
-      rtjson=json.dumps(rt)
+      return rt
 
   except Exception as e:
     e = sys.exc_info()[0]
     helper.internalLogger.error('Error: gathering status')
     helper.einternalLogger.exception(e)  
-    rtjson=jsonify({'result': 'KO'})
+    rt={'result': 'KO'}
     helper.internalLogger.debug("status failed")
 
-  return rtjson
+  return rt
 
 
 @api.route('/api/v1.0/webStreamingAgent/reboot', methods=['GET'])
@@ -208,8 +263,8 @@ def post_webStreaming_tracker():
     if not request.json: 
         abort(400)
 
-    if "trackFile" in configuration:
-        with open(configuration["trackFile"], 'w') as outfile:
+    if "trackFile" in GLB_configuration:
+        with open(GLB_configuration["trackFile"], 'w') as outfile:
           json.dump(request.json, outfile)
           return rt, 201
 
@@ -224,13 +279,13 @@ def post_webStreaming_tracker():
 def what2track():
   rt={}
 
-  if "trackFile" in configuration:
+  if "trackFile" in GLB_configuration:
    try:
-     with open(configuration["trackFile"]) as json_data:
+     with open(GLB_configuration["trackFile"]) as json_data:
        rt = json.load(json_data)
 
    except Exception as e:
-     helper.internalLogger.error("Error processing what to track in config".format(configuration))
+     helper.internalLogger.error("Error processing what to track in config".format(GLB_configuration))
      helper.einternalLogger.exception(e)
 
   return rt
@@ -253,7 +308,7 @@ def getKPI(cmd):
     r=subprocess.run(cmd, shell=True,universal_newlines=True, stdout=subprocess.PIPE,   stderr=subprocess.PIPE)
     rt=int(r.stdout)
   except Exception as e:
-    helper.internalLogger.error("Error in getCpuUsage".format(configuration))
+    helper.internalLogger.error("Error in getCpuUsage".format(GLB_configuration))
     helper.einternalLogger.exception(e)
   return rt
 
@@ -268,8 +323,8 @@ def amIReceivingStreaming():
 
     GLB_ts.updateKPIs()
 
-    if ((not GLB_ts.latestCPU is  None) and  (not GLB_ts.latestCPU is -1) and (GLB_ts.latestCPU >= configuration["kpi"]["cpu"]["minValue"])) and \
-       ((not GLB_ts.latestBW  is  None) and (GLB_ts.latestBW  >= configuration["kpi"]["bwKbps"]["minValue"])):
+    if ((not GLB_ts.latestCPU is  None) and  (not GLB_ts.latestCPU is -1) and (GLB_ts.latestCPU >= GLB_configuration["kpi"]["cpu"]["minValue"])) and \
+       ((not GLB_ts.latestBW  is  None) and (GLB_ts.latestBW  >= GLB_configuration["kpi"]["bwKbps"]["minValue"])):
        rt=True
      
  except Exception as e:
@@ -283,7 +338,7 @@ def amIReceivingStreaming():
 
 '''----------------------------------------------------------'''
 def stopPlayer():
-    aux=configuration["browserLauncher"] + " STOP" 
+    aux=GLB_configuration["browserLauncher"] + " STOP" 
     helper.internalLogger.debug('browserLauncher: Calling {0}...'.format(aux))
     #r=subprocess.run(aux, shell=True,universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     r=subprocess.run(aux, shell=True,universal_newlines=True)
@@ -293,11 +348,11 @@ def stopPlayer():
 
 '''----------------------------------------------------------'''
 def startPlayer(p):
-    aux=configuration["browserLauncher"] + " " \
+    aux=GLB_configuration["browserLauncher"] + " " \
       + '"'+ p +'"'+ " " \
-      + str(configuration["playButton"]["x"]) + " " \
-      + str(configuration["playButton"]["y"]) + " " \
-      + str(configuration["loadTime"])
+      + str(GLB_configuration["playButton"]["x"]) + " " \
+      + str(GLB_configuration["playButton"]["y"]) + " " \
+      + str(GLB_configuration["loadTime"])
     helper.internalLogger.debug('browserLauncher: Calling {0}...'.format(aux))
     r=subprocess.run(aux, shell=True,universal_newlines=True)
     helper.internalLogger.debug('browserLauncher: Result: {0}'.format(r))
@@ -314,8 +369,8 @@ def tryPlay(channel):
    startPlayer(channel)
 
    maxTout=60
-   if "browserLauncherTimeout" in configuration:
-     maxTout=configuration["browserLauncherTimeout"]
+   if "browserLauncherTimeout" in GLB_configuration:
+     maxTout=GLB_configuration["browserLauncherTimeout"]
    for x in range(10):
      helper.internalLogger.debug('Streaming just launched, checking if ok ... {0}/10'.format(x))
      time.sleep(maxTout/10)
@@ -403,16 +458,16 @@ def main(configfile):
   cfg_log_exceptions="webStreamingAgente.log"
 
   # Let's fetch data
-  global configuration
-  configuration={}
+  global GLB_configuration
+  GLB_configuration={}
   with open(configfile) as json_data:
-      configuration = json.load(json_data)
+      GLB_configuration = json.load(json_data)
   #Get log names
-  if "log" in configuration:
-      if "logTraces" in configuration["log"]:
-        cfg_log_traces = configuration["log"]["logTraces"]
-      if "logExceptions" in configuration["log"]:
-        cfg_log_exceptions = configuration["log"]["logExceptions"]
+  if "log" in GLB_configuration:
+      if "logTraces" in GLB_configuration["log"]:
+        cfg_log_traces = GLB_configuration["log"]["logTraces"]
+      if "logExceptions" in GLB_configuration["log"]:
+        cfg_log_exceptions = GLB_configuration["log"]["logExceptions"]
   helper.init(cfg_log_traces,cfg_log_exceptions)
   print('See logs traces in: {0} and exeptions in: {1}-----------'.format(cfg_log_traces,cfg_log_exceptions))  
   helper.internalLogger.critical('webStreamingAgent-start -------------------------------')  
@@ -432,7 +487,7 @@ def main(configfile):
     apiRestTask.start()
 
   except Exception as e:
-    helper.internalLogger.critical("Error processing configuration json {0} file. Exiting".format(configfile))
+    helper.internalLogger.critical("Error processing GLB_configuration json {0} file. Exiting".format(configfile))
     helper.einternalLogger.exception(e)
     loggingEnd()
     return  
@@ -454,7 +509,7 @@ def main(configfile):
 '''----------------------------------------------------------'''
 '''----------------     apirest_task      -------------------'''
 def apirest_task():
-  api.run(debug=True, use_reloader=False,port=5060,host='0.0.0.0')
+  api.run(debug=True, use_reloader=False,port=GLB_configuration["port"],host=GLB_configuration["host"])
 
 
 '''----------------------------------------------------------'''

@@ -1,6 +1,7 @@
 import logging
 import sys
 import os
+import json
 
 def init(tracePath="/var/log/em.log",exceptionsPath="/var/log/em.log",il="il",eil="eil"):
   global internalLogger
@@ -25,4 +26,11 @@ def amIaPi():
   if "arm" in os.uname()[4]:
     rt=True
   return rt
+
+
+def to_pretty_json(value):
+    return json.dumps(value, sort_keys=True,
+                      indent=4, separators=(',', ': '))
+
+
 

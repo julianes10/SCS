@@ -1,6 +1,8 @@
 #!/bin/bash
-
-
+## ONE SHOOT, NOT AGGREGATING TROUBLESHOOTING AND MONITORING
+SS="/tmp/displayMedia.log"
+echo "Starting $@..." | tee $SS
+date | tee -a $SS
 
 ##################### PARSING ARGUMENTS ########################
 ARGtimeout=0
@@ -110,11 +112,33 @@ function killdisplay() {
   pkill -f mplayer
   killall mplayer
 
+  pkill -f omxplayer
+  killall omxmplayer
+
+  pkill -f feh
+  killall feh
+
+
+
   pid=`ps -fea | grep mplayer | grep -v grep | awk '{print $2}'`
   re='^[0-9]+$'
   if  [[ $pid =~ $re ]] ; then
     kill $pid
   fi
+
+  pid=`ps -fea | grep omxplayer | grep -v grep | awk '{print $2}'`
+  re='^[0-9]+$'
+  if  [[ $pid =~ $re ]] ; then
+    kill $pid
+  fi
+
+
+  pid=`ps -fea | grep feh | grep -v grep | awk '{print $2}'`
+  re='^[0-9]+$'
+  if  [[ $pid =~ $re ]] ; then
+    kill $pid
+  fi
+
 
 }
 
@@ -250,12 +274,56 @@ function renderMplayerVideo() {
     argSound="-nosound"
   fi
   for (( i = 0; i < $ARGreplaynumber; i++ )); do
-    echo "### DEBUG playing video - $ARGnosound-$argSound - $i times. "
+    echo "### DEBUG playing video - $ARGnosound-$argSound - $i times. " | tee -a $SS
     mplayer -fs -zoom $argSound $file 
     checkIfExit
   done
 }
 
+
+#---------------------------------------------------------
+function renderVideo() {
+  ############## BLOCKING ################
+  file=$1
+  for (( i = 0; i < $ARGreplaynumber; i++ )); do
+    echo "### DEBUG playing video $file, $i out of $ARGreplaynumber times. " | tee -a $SS
+    omxplayer $file 
+    checkIfExit
+  done
+}
+
+#---------------------------------------------------------
+function renderVideos() {
+  ############## BLOCKING ################
+  echo "### DEBUG playing videos from $1..." | tee -a $SS
+  for i in $1/*
+  do
+    if test -f "$i" 
+    then
+       echo "### DEBUG playing video: $i..." | tee -a $SS
+       omxplayer $i 
+       checkIfExit
+    fi
+  done
+}
+
+#---------------------------------------------------------
+function renderImages() {
+  ############## BLOCKING ################
+  echo "### DEBUG playing slideshow each image 4 seconds from $1... "  | tee -a $SS
+  file=$1
+#  feh -Y -x -q -Z -z -F --cycle-once -D 7 $file
+  feh -Y -x -q -Z -z -F --on-last-slide quit -D 4 $file
+
+
+}
+
+#---------------------------------------------------------
+function renderImage() {
+  echo "### DEBUG playing image $1... "  | tee -a $SS
+  file=$1
+  feh -Y -x -q -Z -z -F $file  &
+}
 #---------------------------------------------------------
 function renderMplayerVideoShow() {
   ############## BLOCKING ################
@@ -265,7 +333,7 @@ function renderMplayerVideoShow() {
     argSound="-nosound"
   fi
   for (( i = 0; i < $ARGreplaynumber; i++ )); do
-    echo "### DEBUG playing video show - $ARGnosound-$argSound - $i times"
+    echo "### DEBUG playing video show - $ARGnosound-$argSound - $i times"   | tee -a $SS
     mplayer -fs -zoom $argSound $path/*
     checkIfExit
   done
@@ -278,7 +346,7 @@ function manageTimeout() {
     echo "DEBUG no timeout"
   else
     ############## BLOCKING ################
-    echo "DEBUG sleeping $tout ..."
+    echo "DEBUG sleeping $tout ..."  | tee -a $SS
     sleep $tout
     killdisplay
     chromiumPiCleanUp
@@ -289,7 +357,7 @@ function manageTimeout() {
 function generateSlideShow() {
   path=$1
   output=$2 
-  convert -delay 500 -loop 0 $path/*.jpg $output
+  convert -delay 500 -loop 0 $path/*.jpg $output 
 }
 
 #---------------------------------------------------------
@@ -306,7 +374,7 @@ function checkIfExit() {
   if [ "$runninPID" == "$myPID" ]; then
     echo "### DEBUG still the only one. Cool"
   else
-    echo "### DEBUG I must die now, other fresher is running. Bye"
+    echo "### DEBUG I must die now, other fresher is running. Bye"  | tee -a $SS
     exit
   fi
 
@@ -334,11 +402,11 @@ checkIfExit
 
 
 
-echo "DEBUG starting the game...."
+echo "DEBUG starting $0 game...."  | tee -a $SS
 getActiveSourceHDMI
 
 if [ $ARGtxt ]; then
-  echo "DEBUG showing a text: $ARGurl ..."
+  echo "DEBUG showing a text: $ARGurl ..."  | tee -a $SS
   prepareHTMLtxt "$ARGurl" /tmp/txt.html
   renderHTML /tmp/txt.html
   manageTimeout $ARGtimeout
@@ -346,16 +414,18 @@ fi
 
 
 if [ $ARGimage ]; then
-  echo "DEBUG showing an image: $ARGurl ..."
-  prepareHTML $ARGurl /tmp/image.html
-  renderHTML /tmp/image.html
+  echo "DEBUG showing an image: $ARGurl ..."  | tee -a $SS
+  #prepareHTML $ARGurl /tmp/image.html
+  #renderHTML /tmp/image.html
+  renderImage $ARGurl
   manageTimeout $ARGtimeout
 fi
 
 
 if [ $ARGvideo ]; then
-  echo "DEBUG showing an video: $ARGurl ..."
-  renderMplayerVideo $ARGurl
+  echo "DEBUG showing an video: $ARGurl ..."  | tee -a $SS
+  ## renderMplayerVideo $ARGurl
+  renderVideo $ARGurl
 fi
 
 
@@ -364,11 +434,12 @@ if [ $ARGslideshow ]; then
   if [ ! -d $path  ]; then
     path=`dirname $ARGurl`
   fi
-  echo "DEBUG showing slideshow: $path ..."
-  generateSlideShow $path  /tmp/image.gif
-  prepareHTML /tmp/image.gif /tmp/image.html
-  renderHTML /tmp/image.html
-  manageTimeout $ARGtimeoutSlideShow
+  echo "DEBUG showing slideshow: $path ..."  | tee -a $SS
+  #not needed with feh generateSlideShow $path  /tmp/image.gif
+  #not needed with feh prepareHTML /tmp/image.gif /tmp/image.html
+  #not needed with feh renderHTML /tmp/image.html manageTimeout $ARGtimeoutSlideShow
+  renderImages $path
+  checkIfExit
 fi
 
 if [ $ARGvideoshow ]; then
@@ -376,8 +447,9 @@ if [ $ARGvideoshow ]; then
   if [ ! -d $path  ]; then
     path=`dirname $ARGurl`
   fi
-  echo "DEBUG showing videoshow: $path ..."
-  renderMplayerVideoShow $path
+  echo "DEBUG showing videoshow: $path ..."  | tee -a $SS
+  # too slow when zoom renderMplayerVideoShow $path
+  renderVideos $path
 fi
 
 if [ $ARGmediashow ]; then
@@ -388,22 +460,22 @@ if [ $ARGmediashow ]; then
     p=`dirname $pp`
   fi
 
+  echo "DEBUG showing mediashow: $p ..."  | tee -a $SS
   pathVideo=$p/video
   pathPhoto=$p/photo
 
-  generateSlideShow $pathPhoto  /tmp/image.gif
-  prepareHTML /tmp/image.gif /tmp/image.html
+  #generateSlideShow $pathPhoto  /tmp/image.gif
+  #prepareHTML /tmp/image.gif /tmp/image.html
 
   while  [ true ]
   do
-
-    echo "DEBUG media videoshow: $pathVideo ..."
-    renderMplayerVideoShow $pathVideo
+    date | tee -a $SS
+    ## to slow renderMplayerVideoShow $pathVideo
+    renderVideos $pathVideo
     checkIfExit
-
-    echo "DEBUG media photoshow: $pathPhoto ..."
-    renderHTML /tmp/image.html
-    manageTimeout $ARGtimeoutSlideShow
+    date | tee -a $SS
+    #renderHTML /tmp/image.html      manageTimeout $ARGtimeoutSlideShow
+    renderImages $pathPhoto
     checkIfExit
   done
   ############## BLOCKING ################

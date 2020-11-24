@@ -7,7 +7,8 @@ Wants = network-online.target
 User = pi
 Group = pi
 Type=simple
-ExecStart=/opt/PROJECT_NAME/webStreamingAgent/webStreamingAgent.py --configfile /etc/webStreamingAgent.conf
+ExecStart=/opt/PROJECT_NAME/SERVICE_NAME/webStreamingAgent.py --configfile /etc/SERVICE_NAME.conf
+WorkingDirectory=/opt/PROJECT_NAME/SERVICE_NAME/
 Restart=always
 
 [Install]
