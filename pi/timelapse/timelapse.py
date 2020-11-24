@@ -161,7 +161,7 @@ def format_videoURL(value):
 '''----------------------------------------------------------'''
 '''----------------      API REST         -------------------'''
 '''----------------------------------------------------------'''
-api = Flask("api",template_folder="templates",static_folder='static')
+api = Flask("api",template_folder="templates",static_folder='static_timelapse')
 api.jinja_env.filters['datetime'] = format_datetime
 api.jinja_env.filters['videoURL'] = format_videoURL
 
@@ -531,7 +531,7 @@ def updateOngoing(ongoing):
 '''----------------------------------------------------------'''
 def  mountBindMediaPath(mount=True):
   ### Mount in loop mediapath 
-  localpath=os.path.dirname(os.path.abspath(__file__))+ "/static" + GLB_configuration["mediaPath"]
+  localpath=os.path.dirname(os.path.abspath(__file__))+ "/static_timelapse" + GLB_configuration["mediaPath"]
 
   try:
         #Create local path
