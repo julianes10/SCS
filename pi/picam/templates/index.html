@@ -15,7 +15,9 @@
   <!-- Tab links -->
   <div class="tab">
     <button class="tablinks" onclick="openTab(event, 'Live')" >Live</button>
+    {% if st.servo %} 
     <button class="tablinks" onclick="openTab(event, 'PanTilt')">Pan Tilt Control</button>
+    {% endif %}
     <button class="tablinks" onclick="openTab(event, 'Status')">Status</button>
   </div>
 

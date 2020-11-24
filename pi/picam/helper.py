@@ -26,3 +26,10 @@ def amIaPi():
     rt=True
   return rt
 
+import json
+def to_pretty_json(value):
+    return json.dumps(value, sort_keys=True,
+                      indent=4, separators=(',', ': '))
+
+
+

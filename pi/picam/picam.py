@@ -479,7 +479,7 @@ def format_videoURL(value):
 api = Flask("api",template_folder="templates",static_folder='static_picam')
 api.jinja_env.filters['datetime'] = format_datetime
 api.jinja_env.filters['videoURL'] = format_videoURL
-
+api.jinja_env.filters['tojson_pretty'] = to_pretty_json
 
 
 '''----------------------------------------------------------'''
