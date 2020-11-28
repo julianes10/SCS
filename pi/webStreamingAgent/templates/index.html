@@ -6,12 +6,39 @@
       <script src="{{url_for('static', filename='tabsmgt.js')}}"></script>
     </head>
 <body>
-
-
 <h2>Web Streaming Agent Interface</h2>
 
-TODO PROPER RENDER NICELY HTML
-<br>
+<h3>Available media</h3>
+{% if status.displayMedia.photo %}
+<table>
+   <tr><th>Photo</th></th></tr>
+   {% for item in status.displayMedia.photo %} 
+   <tr>
+    <td>{{item}}</td>
+    <td><form action="{{ url_for('webStreamingAgent_gui_photo_clean',name=item) }}"> <input type="submit" value="CLEAN" /></form></td>
+   </tr>
+   {% endfor %}
+</table>
+{% else %}
+No photo available so far.
+{% endif %}
+
+{% if status.displayMedia.video %}
+<table>
+   <tr><th>Video</th></th></tr>
+   {% for item in status.displayMedia.video %} 
+   <tr>
+    <td>{{item}}</td>
+    <td><form action="{{ url_for('webStreamingAgent_gui_video_clean',name=item) }}"> <input type="submit" value="CLEAN" /></form></td>
+   </tr>
+   {% endfor %}
+</table>
+{% else %}
+No video available so far.
+{% endif %}
+
+
+<h3>RAW STATUS</h3>
 <pre>{{status|tojson_pretty}}</pre>
 
 

@@ -142,12 +142,12 @@ def listFiles2Array(basedir,extension):
 def getStatusDisplayMedia():
   helper.internalLogger.debug("status getStatusDisplayMedia")
   rt = {}
-  rt['media-photo']={}
-  rt['media-video']={}
+  rt['photo']={}
+  rt['video']={}
   rt['status']={}
   try:
-    rt['media-photo']=listFiles2Array(GLB_configuration["media-photo"],"jpg")
-    rt['media-video']=listFiles2Array(GLB_configuration["media-video"],"mp4")
+    rt['photo']=listFiles2Array(GLB_configuration["media-photo"],"jpg")
+    rt['video']=listFiles2Array(GLB_configuration["media-video"],"mp4")
 
     file = open(GLB_configuration["displayStatus"])
     rt['status']=file.read()
@@ -157,9 +157,6 @@ def getStatusDisplayMedia():
         e = sys.exc_info()[0]
         helper.internalLogger.error('Some exception getting displaymedia files')
         helper.einternalLogger.exception(e)  
-
-
-
 
   return rt
 '''----------------------------------------------------------'''
@@ -270,6 +267,30 @@ def post_webStreaming_tracker():
 
     abort(400)
 
+
+'''----------------------------------------------------------'''
+
+def cleanFile(path):
+  helper.internalLogger.debug("Cleaning item: {0}".format(path))
+  if os.path.isfile(path):
+      os.remove(path)
+
+
+@api.route('/clean/photo/<name>',methods=["GET"])
+@api.route('/webStreamingAgent/clean/photo/<name>',methods=["GET"])
+def webStreamingAgent_gui_photo_clean(name):
+   helper.internalLogger.debug("GUI clean {0}...".format(name))
+   path=GLB_configuration["media-photo"]+"/"+name
+   cleanFile(path)
+   return redirect(url_for('webStreamingAgent_home'))
+
+@api.route('/clean/video/<name>',methods=["GET"])
+@api.route('/webStreamingAgent/clean/video/<name>',methods=["GET"])
+def webStreamingAgent_gui_video_clean(name):
+   helper.internalLogger.debug("GUI clean {0}...".format(name))
+   path=GLB_configuration["media-video"]+"/"+name
+   cleanFile(path)
+   return redirect(url_for('webStreamingAgent_home'))
 
 
 '''----------------------------------------------------------'''
