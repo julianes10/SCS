@@ -1,5 +1,8 @@
 #!/bin/bash 
 echo "Wrapper to access youtube plugin in kodi"
+echo "Also add support direct OMXPLAYER with youtube-dl"
+# Check latest https://github.com/ytdl-org/youtube-dl
+
 echo "Here we go: $@"
 
 ################################################
@@ -12,7 +15,8 @@ function usage
            --next           <OUTPUT_FILE>  
            --back           <OUTPUT_FILE>  
            --stop  
-           --url            <URL> 
+           --url            <URL>
+           --direct-url     <URL> Use youtube-dl and omxplayer instead to kodi
            --help"
   echo "Notes:
           --search option will play first item on search results list 
@@ -33,7 +37,11 @@ function playVideoId
     --data '{ "jsonrpc": "2.0", "method": "Player.Open", "params": [{"file" : "plugin://plugin.video.youtube/?action=play_video&videoid='$temp'"}], "id": 1 }'
 }  
 
-
+################################################
+function playVideoOmxPlayer 
+{
+  omxplayer -o hdmi $(youtube-dl -g $1)
+} 
 ################################################
 function stopPlayer 
 {
@@ -79,6 +87,8 @@ elif [ "$1" == "--url" ]; then
   playVideoId $video
 elif [ "$1" == "--video-id" ]; then
   playVideoId $2
+elif [ "$1" == "--direct-url" ]; then
+  playVideoOmxPlayer $2
 elif [ "$1" == "--search" ]; then
   searchString "$2" "$3" 
   video=$( head -1 $3 | cut -d'=' -f2 )
