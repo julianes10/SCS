@@ -62,8 +62,9 @@ api.jinja_env.filters['datetime'] = format_datetime
 '''----------------------------------------------------------'''
 @api.route('/api/v1.0/telegramBOT/event', methods=['POST'])
 def post_telegram_event():
+    #helper.internalLogger.debug("EVENT {0}".format(request))
     if not request.json:
-        helper.internalLogger.debug("It is not a json. Back with error")
+        helper.internalLogger.debug("It is not a json {0}. Back with error".format(request))
         abort(400)
     return requestNewEvent(request.json)
 
@@ -323,11 +324,15 @@ def runAction(action,originalMsg):
         helper.internalLogger.debug("Custom cmd with TELEGRAM_COMMAND {0}'".format(cmd)) 
         cmd=action["cmd"].replace("TELEGRAM_COMMAND",' '.join(msgSplitted[1:]))
 
+    startArg=1
+    if "full-message-args" in action:
+      startArg=0 #include all message as args
+
     if "include-message-args" in action:
       if "single-args" in action:
-        cmd=action["cmd"] + "'"+' '.join(msgSplitted[1:])+"'"
+        cmd=action["cmd"] + "'"+' '.join(msgSplitted[startArg:])+"'"
       else:
-        cmd=action["cmd"] + ' '+' '.join(msgSplitted[1:])
+        cmd=action["cmd"] + ' '+' '.join(msgSplitted[startArg:])
   
     global bot
     bg=False
@@ -638,6 +643,8 @@ def isValidItem(msg,l,key):
 '''----------------------------------------------------------'''
 def processMediaMessage(message):
   now=time.time()
+  oldmask = os.umask(000)
+  os.umask(000)
   try:
    actionName="UNKNOWN"
    helper.internalLogger.debug("message.content_type:{0}".format(message.content_type))
@@ -646,7 +653,7 @@ def processMediaMessage(message):
      pathFile=GLB_configuration["media-video"]["basePath"]+"/"+str(now)+".mp4"
      actionName=GLB_configuration["media-video"]["action"]
      try:
-       os.makedirs(GLB_configuration["media-video"]["basePath"])
+       os.makedirs(GLB_configuration["media-video"]["basePath"],mode = 0o777)
      except:
        pass
    elif message.content_type == 'photo':
@@ -654,7 +661,7 @@ def processMediaMessage(message):
      pathFile=GLB_configuration["media-photo"]["basePath"]+"/"+str(now)+".jpg"  
      actionName=GLB_configuration["media-photo"]["action"]
      try:
-       os.makedirs(GLB_configuration["media-photo"]["basePath"])
+       os.makedirs(GLB_configuration["media-photo"]["basePath"],mode = 0o777)
      except:
        pass
    elif message.content_type == 'document':
@@ -662,18 +669,20 @@ def processMediaMessage(message):
      pathFile=GLB_configuration["media-document"]["basePath"]+"/"+message.document.file_name
      actionName=GLB_configuration["media-document"]["action"]
      try:
-       os.makedirs(GLB_configuration["media-document"]["basePath"])
+       os.makedirs(GLB_configuration["media-document"]["basePath"],mode = 0o777)
      except:
        pass
    else:
      helper.internalLogger.debug("Unsupported content type")
+     os.umask(oldmask)
      return
 
    file = bot.get_file(fileID)
    downloaded_file = bot.download_file(file.file_path)
    helper.internalLogger.debug("Dumping media in :{0}".format(pathFile))
-   with open(pathFile, 'wb') as new_file:
+   with open(pathFile,"wb") as new_file:
          new_file.write(downloaded_file)
+   os.chmod(pathFile, 0o777)
    ### FAKE MSG, IMPORTANT THING IS ADDED PATHFILE AS PARAMETER CRITERIA
    result=runAction(GLB_configuration["actions"][actionName],"MEDIA " + pathFile)
    if result is None:
@@ -686,7 +695,9 @@ def processMediaMessage(message):
     e = sys.exc_info()[0]
     helper.internalLogger.critical('Error in processMediaMessage')
     helper.einternalLogger.exception(e)  
+    os.umask(oldmask)
 
+  os.umask(oldmask)
 
 
 '''----------------------------------------------------------'''
@@ -915,7 +926,7 @@ def main(configfile):
     @bot.message_handler(content_types=['text','video','document','photo'])
     def process_all(message):
 
-      #ONLY FOR DEBUG helper.internalLogger.debug("INBOX - process_all -  {0}".format(message))
+      #ONLY FOR FULLDEBUG       helper.internalLogger.debug("INBOX - process_all -  {0}".format(message))
       
       # CONTENT-TYPE CONTROL
       try:
@@ -1097,13 +1108,24 @@ def main(configfile):
         for key,item in GLB_configuration["actions"].items():
             #helper.internalLogger.debug("Checking key '{0}' and msg {1}".format(key,msg))
             bingo=False
-            if msg == key.lower():
-              bingo=True
+            if msg == key.lower():               
+              bingo=True            
             elif "alias" in item:
               for j in range(0, len(item["alias"])):
                 if msg == item["alias"][j].lower():
                   bingo=True
                   break
+
+            if "startswith" in item: 
+             if item["startswith"]:
+              if msg.startswith(key.lower()):
+                bingo=True            
+              elif "alias" in item:
+                for j in range(0, len(item["alias"])):
+                  if msg.startswith(item["alias"][j].lower()):
+                    bingo=True
+                    break
+ 
             if bingo:
               helper.internalLogger.debug("Command '{0}' executing...".format(key))
               result=runAction(item,message.text)  
@@ -1112,6 +1134,12 @@ def main(configfile):
               else:
                   sendActionResult(message.chat.id,item,result)    
               return
+
+        # Here we are if no built-in media or custome msg is find. Let's try if it is 
+        # same kind of supported shared link
+
+ 
+
         bot.reply_to(message, "Ignoring this request.")
 
 
