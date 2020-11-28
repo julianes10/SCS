@@ -33,6 +33,10 @@ case $key in
     ARGvideo=true
     shift # past value
     ;;
+    -y|--youtube-video)
+    ARGurlYTvideo=true
+    shift # past value
+    ;;
     -s|--slideshow)
     ARGslideshow=true
     shift # past value
@@ -293,6 +297,13 @@ function renderVideo() {
 }
 
 #---------------------------------------------------------
+function renderYTVideo() {
+  ############## BLOCKING ################
+  # Check latest https://github.com/ytdl-org/youtube-dl
+  omxplayer -o hdmi $(youtube-dl -g $1)
+}
+
+#---------------------------------------------------------
 function renderVideos() {
   ############## BLOCKING ################
   echo "### DEBUG playing videos from $1..." | tee -a $SS
@@ -428,6 +439,12 @@ if [ $ARGvideo ]; then
   renderVideo $ARGurl
 fi
 
+if [ $ARGurlYTvideo ]; then
+  echo "DEBUG showing an video from youtube: $ARGurl ..."  | tee -a $SS
+  ## renderYTVideo $ARGurl
+  renderYTVideo $ARGurl
+fi
+
 
 if [ $ARGslideshow ]; then
   path=$ARGurl
@@ -481,6 +498,6 @@ if [ $ARGmediashow ]; then
   ############## BLOCKING ################
 fi
 
-
+echo "DEBUG Exiting."  | tee -a $SS
 #unclutter &
 exit 0
