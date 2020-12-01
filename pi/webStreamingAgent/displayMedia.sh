@@ -300,7 +300,7 @@ function renderVideo() {
 function renderYTVideo() {
   ############## BLOCKING ################
   # Check latest https://github.com/ytdl-org/youtube-dl
-  omxplayer -o hdmi $(youtube-dl -g $1)
+  omxplayer $(youtube-dl -g -f best $1)
 }
 
 #---------------------------------------------------------
