@@ -58,16 +58,21 @@ class TrackerStats:
     self.dataBW=[]
   def toDict(self):
     rt={}
-    rt['numFails'] = self.numFails
-    rt['numSuccess'] = self.numSuccess
-    rt['timeFailing'] = round(self.timeFailing,2)
-    rt['timeSucceeding'] = round(self.timeSucceeding,2)
-    rt['consecutiveFails'] = self.consecutiveFails
-    rt['latestCPU'] = round(self.latestCPU,2)
-    rt['latestBW'] = round(self.latestBW,2)
-    rt['OnMeanBW'] = round(self.OnMeanBW,2)
-    rt['OnMedianBW'] = round(self.OnMedianBW,2)
-    rt['OnStdDev'] = round(self.OnStdDev,2)
+    try:
+      rt['numFails'] = self.numFails
+      rt['numSuccess'] = self.numSuccess
+      rt['timeFailing'] = round(self.timeFailing,2)
+      rt['timeSucceeding'] = round(self.timeSucceeding,2)
+      rt['consecutiveFails'] = self.consecutiveFails
+      rt['latestCPU'] = round(self.latestCPU,2)
+      rt['latestBW'] = round(self.latestBW,2)
+      rt['OnMeanBW'] = round(self.OnMeanBW,2)
+      rt['OnMedianBW'] = round(self.OnMedianBW,2)
+      rt['OnStdDev'] = round(self.OnStdDev,2)
+    except Exception as e:
+        e = sys.exc_info()[0]
+        helper.internalLogger.error('Some exception returning traker stats')
+        helper.einternalLogger.exception(e)  
 
     return rt
 
@@ -138,6 +143,36 @@ def listFiles2Array(basedir,extension):
   target_files = [i for i in os.listdir(basedir) if os.path.splitext(i)[1] == ext]
   return target_files
 
+def generatePhotoThumbnails(bdir,fileList,oDir):
+  from PIL import Image
+  try:
+    for x in fileList:     
+      helper.internalLogger.debug("Generating photo thumbnails of {0}".format(x))
+      ofile=oDir+"/"+os.path.basename(x)
+      if not os.path.isfile(ofile):    
+        im=Image.open(bdir+"/"+x)
+        im.thumbnail((120,120))
+        im.save(ofile)
+         
+  except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.error('exception generating thumbnail photo')
+    helper.einternalLogger.exception(e)  
+
+def generateVideoThumbnails(bdir,fileList,oDir):
+
+  try:
+    for x in fileList:     
+      helper.internalLogger.debug("Generating video thumbnails of {0}".format(x))
+      ofile=oDir+"/"+os.path.basename(x)
+      if not os.path.isfile(ofile):    
+        cmd="ffmpegthumbnailer -i " +bdir+"/"+x +" -o " + ofile
+        subprocess.run(['bash','-c',cmd])
+         
+  except Exception as e:
+    e = sys.exc_info()[0]
+    helper.internalLogger.error('exception generating thumbnail video')
+    helper.einternalLogger.exception(e)    
 
 def getStatusDisplayMedia():
   helper.internalLogger.debug("status getStatusDisplayMedia")
@@ -148,7 +183,12 @@ def getStatusDisplayMedia():
   try:
     rt['photo']=listFiles2Array(GLB_configuration["media-photo"],"jpg")
     rt['video']=listFiles2Array(GLB_configuration["media-video"],"mp4")
+    rt['photo'].sort() 
+    rt['video'].sort() 
 
+    generatePhotoThumbnails(GLB_configuration["media-photo"],rt['photo'],"static_webStreamingAgent")
+    generateVideoThumbnails(GLB_configuration["media-video"],rt['video'],"static_webStreamingAgent")
+    
     file = open(GLB_configuration["displayStatus"])
     rt['status']=file.read()
     file.close()
@@ -324,12 +364,13 @@ def targetChannel():
 
 
 def getKPI(cmd):
-  rt=None
+  rt=0
   try:
     r=subprocess.run(cmd, shell=True,universal_newlines=True, stdout=subprocess.PIPE,   stderr=subprocess.PIPE)
-    rt=int(r.stdout)
+    if r!="":
+      rt=int(r.stdout)
   except Exception as e:
-    helper.internalLogger.error("Error in getCpuUsage".format(GLB_configuration))
+    helper.internalLogger.error("Error in getCpuUsage {0}".format(r))
     helper.einternalLogger.exception(e)
   return rt
 

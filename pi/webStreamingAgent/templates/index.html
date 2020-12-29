@@ -9,32 +9,62 @@
 <h2>Web Streaming Agent Interface</h2>
 
 <h3>Available media</h3>
+
+{% if status.displayMedia %}
+
+
 {% if status.displayMedia.photo %}
 <table>
-   <tr><th>Photo</th></th></tr>
+   {% set imgPerRow = namespace(value=0) %}
+   <tr><th>Photos</th></th></tr>
    {% for item in status.displayMedia.photo %} 
-   <tr>
-    <td>{{item}}</td>
-    <td><form action="{{ url_for('webStreamingAgent_gui_photo_clean',name=item) }}"> <input type="submit" value="CLEAN" /></form></td>
-   </tr>
+    {% if imgPerRow.value==0 %}
+       <tr>
+    {% endif %}
+    <td><a href="{{ url_for('static',filename=item) }}"> 
+        <img src="{{ url_for('static',filename=item,parameto=randomhack) }}" /></a>
+        <form action="{{ url_for('webStreamingAgent_gui_photo_clean',name=item) }}"> <input type="submit" value="CLEAN" /></form></td>
+    
+    {% set imgPerRow.value=imgPerRow.value+1 %}
+    {% if imgPerRow.value==5 %}
+      </tr>
+      {% set imgPerRow.value=0 %}
+    {% endif %}
    {% endfor %}
 </table>
 {% else %}
 No photo available so far.
 {% endif %}
 
+
+
+
+
+
 {% if status.displayMedia.video %}
 <table>
-   <tr><th>Video</th></th></tr>
+   {% set imgPerRow = namespace(value=0) %}
+   <tr><th>Videos</th></th></tr>
    {% for item in status.displayMedia.video %} 
-   <tr>
-    <td>{{item}}</td>
-    <td><form action="{{ url_for('webStreamingAgent_gui_video_clean',name=item) }}"> <input type="submit" value="CLEAN" /></form></td>
-   </tr>
+    {% if imgPerRow.value==0 %}
+       <tr>
+    {% endif %}
+
+    <td><img src="{{ url_for('static',filename=item,parameto=randomhack) }}" />
+        <form action="{{ url_for('webStreamingAgent_gui_video_clean',name=item) }}"> <input type="submit" value="CLEAN" /></form></td>
+    
+    {% set imgPerRow.value=imgPerRow.value+1 %}
+    {% if imgPerRow.value==5 %}
+      </tr>
+      {% set imgPerRow.value=0 %}
+    {% endif %}
    {% endfor %}
+
 </table>
 {% else %}
 No video available so far.
+{% endif %}
+
 {% endif %}
 
 

@@ -1,5 +1,5 @@
 function resizeIframe(obj) {
-    obj.style.height = obj.contentWindow.document.body.scrollHeight+1000 + 'px';
+    obj.style.height = obj.contentWindow.document.body.scrollHeight+10000 + 'px';
 }
 
 
