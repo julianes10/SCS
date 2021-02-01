@@ -52,3 +52,6 @@
 [submodule "arduino/arduino-DHT"]
 	path = arduino/arduino-DHT
 	url = https://github.com/julianes10/arduino-DHT.git
+[submodule "arduino/DFPlayer-Mini-mp3"]
+	path = arduino/DFPlayer-Mini-mp3
+	url = https://github.com/DFRobot/DFPlayer-Mini-mp3.git
