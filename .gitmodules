@@ -43,9 +43,6 @@
 [submodule "arduino/Adafruit_BusIO"]
 	path = arduino/Adafruit_BusIO
 	url = https://github.com/adafruit/Adafruit_BusIO.git
-[submodule "arduino/ArduinoCore-avr"]
-	path = arduino/ArduinoCore-avr
-	url = https://github.com/arduino/ArduinoCore-avr.git
 [submodule "arduino/U8g2_Arduino"]
 	path = arduino/U8g2_Arduino
 	url = https://github.com/olikraus/U8g2_Arduino.git
