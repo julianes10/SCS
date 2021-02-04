@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 #include <DFPlayer_Mini_Mp3.h>
  
-SoftwareSerial DFPlayerSerial(10, 11); // RX, TX
+SoftwareSerial DFPlayerSerial(2, 3); // RX, TX
  
 /*
 mp3_play();      //start play
@@ -27,12 +27,10 @@ void setup()
  
 void loop()
 {
-   mp3_play(1);
+   mp3_play("file1");
    delay(6000);
-   mp3_next();
+   mp3_play("file2");
    delay(6000);
-   mp3_prev();
-   delay(6000);
-   mp3_play(4);
+   mp3_play("file3");
    delay(6000);
 }
