@@ -52,3 +52,6 @@
 [submodule "arduino/DFPlayer-Mini-mp3"]
 	path = arduino/DFPlayer-Mini-mp3
 	url = https://github.com/DFRobot/DFPlayer-Mini-mp3.git
+[submodule "arduino/DFRobotDFPlayerMini"]
+	path = arduino/DFRobotDFPlayerMini
+	url = https://github.com/DFRobot/DFRobotDFPlayerMini.git
