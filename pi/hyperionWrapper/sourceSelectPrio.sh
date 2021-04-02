@@ -1,7 +1,7 @@
 HOSTHYP="192.168.1.55"
 PORTHYP="8090"
 
-prio=$1
+prio=$3
 foo=$(cat <<EOF
 {  "command":"sourceselect","priority":$prio}
 EOF

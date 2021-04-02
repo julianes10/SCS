@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import argparse
 import time
 import datetime
@@ -11,7 +11,6 @@ import threading
 import helper
 from random import randint
 
-#Code copy and adapted from https://github.com/adafruit/Adafruit_Python_DHT/blob/master/examples/simpletest.py
 
 
 from flask import Flask, jsonify,abort,make_response,request, url_for
@@ -19,7 +18,7 @@ from flask import Flask, jsonify,abort,make_response,request, url_for
 from helper import *
 
 
-configuration={}
+
 
 '''----------------------------------------------------------'''
 '''----------------      API REST         -------------------'''
@@ -56,21 +55,25 @@ def get_dht_sensors_latest():
     helper.internalLogger.debug("latest cached sensors data required")
     return json.dumps(latestCached)
 
-
 '''----------------------------------------------------------'''
 '''----------------       getSensorData   -------------------'''
 def getSensorData(pin,model=22):
-
+   helper.internalLogger.debug("Reading pin {0}...".format(pin))
    if amIaPi():
-      import Adafruit_DHT
+      import board
+      import adafruit_dht
       if model == 11:  
-        sensor = Adafruit_DHT.DHT11
+        dht_device = adafruit_dht.DHT11(pin)
       else:
-        sensor = Adafruit_DHT.DHT22
-      humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
+        dht_device = adafruit_dht.DHT22(board.D24)
+      temperature = dht_device.temperature
+      humidity = dht_device.humidity
    else:
       humidity=randint(0, 200)/2.0
       temperature=randint(-10, 100)/2.0
+   helper.internalLogger.debug("temp:{0}".format(temperature))
+   dht_device.exit()
+
    return (round(humidity,1),round(temperature,1))
 
 '''----------------------------------------------------------'''
@@ -86,6 +89,11 @@ def main(configfile):
   cfg_log_traces="SIMPLEDHTTRACKER.log"
   cfg_log_exceptions="SIMPLEDHTTRACKERe.log"
   cfg_SensorsDirectory={}
+
+  global configuration
+  
+  configuration={}
+
   # Let's fetch data
   with open(configfile) as json_data:
       configuration = json.load(json_data)
