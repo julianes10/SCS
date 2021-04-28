@@ -10,7 +10,8 @@ import platform
 import threading
 import helper
 from random import randint
-
+import board
+import adafruit_dht
 
 
 from flask import Flask, jsonify,abort,make_response,request, url_for
@@ -37,18 +38,8 @@ def get_dht_status():
 
 @api.route('/api/v1.0/dht/sensors/now', methods=['GET'])
 def get_dht_sensors_now():
-    helper.internalLogger.debug("now sensors data required")
-    info=[]
-
-    for x in dhtList:
-        helper.internalLogger.debug('Reading DHT "{0}" on pin "{1}"...'.format(x["name"],x["pin"]))
-        h, t = getSensorData(x["pin"], x["model"] ) 
-        if h is not None and t is not None:
-          info.append({'name': x["name"],'temperature':t,'humidity':h})
-        else:
-          helper.internalLogger.debug('Error reading DHT "{0}" on pin "{1}"...'.format(x["name"],x["pin"]))
-
-    return json.dumps(info)
+    helper.internalLogger.debug("latest cached sensors data required, keep only for bc")
+    return json.dumps(latestCached)
 
 @api.route('/api/v1.0/dht/sensors/latest', methods=['GET'])
 def get_dht_sensors_latest():
@@ -57,24 +48,45 @@ def get_dht_sensors_latest():
 
 '''----------------------------------------------------------'''
 '''----------------       getSensorData   -------------------'''
-def getSensorData(pin,model=22):
-   helper.internalLogger.debug("Reading pin {0}...".format(pin))
+def getSensorData(dht_device):
+   helper.internalLogger.debug("Reading from handler...")
+   temperature = None
+   humidity = None
    if amIaPi():
-      import board
-      import adafruit_dht
-      if model == 11:  
-        dht_device = adafruit_dht.DHT11(pin)
-      else:
-        dht_device = adafruit_dht.DHT22(board.D24)
+    try:
+      helper.internalLogger.debug("Reading temp...")
       temperature = dht_device.temperature
+      helper.internalLogger.debug("Reading hum...")
       humidity = dht_device.humidity
+    except Exception as e:
+     e = sys.exc_info()[0]
+     helper.internalLogger.debug('Error: Exception reading dht')
+     helper.einternalLogger.exception(e)  
    else:
       humidity=randint(0, 200)/2.0
       temperature=randint(-10, 100)/2.0
    helper.internalLogger.debug("temp:{0}".format(temperature))
-   dht_device.exit()
+   return humidity,temperature
 
-   return (round(humidity,1),round(temperature,1))
+'''----------------------------------------------------------'''
+'''----------------       getSensorData   -------------------'''
+def getHandler(pin,model=22):
+   helper.internalLogger.debug("Handler from pin {0}...".format(pin))
+   dht_device = 0
+   if amIaPi():
+    try:
+      helper.internalLogger.debug("Getting device...")
+      if model == 11:  
+        dht_device = adafruit_dht.DHT11(pin)
+      else:
+        dht_device = adafruit_dht.DHT22(pin)
+        #dht_device = adafruit_dht.DHT22(board.D24)
+    except Exception as e:
+     e = sys.exc_info()[0]
+     helper.internalLogger.debug('Error: Exception getting handler dht')
+     helper.einternalLogger.exception(e)  
+
+   return dht_device
 
 '''----------------------------------------------------------'''
 '''----------------       M A I N         -------------------'''
@@ -155,6 +167,10 @@ def main(configfile):
      ts = time.time()
      st = datetime.datetime.fromtimestamp(ts).strftime('%d-%m-%Y %H:%M:%S')
      for x in dhtList:
+        #Get the handler: 
+        h=getHandler(x["pin"],x["model"])
+        x["handler"]=h
+        helper.internalLogger.debug('handler {0}... '.format(x["handler"]))
         helper.internalLogger.debug('Truncating file {0}... '.format(x["output"]))
         with open(x["output"]+".t", "w") as myfile:
           myfile.write("Temperature " + x["name"] + " From " + st + " " + str(ts) + "\n")      
@@ -165,7 +181,7 @@ def main(configfile):
      while True:
       for x in dhtList:
         helper.internalLogger.debug('Reading DHT "{0}" on pin "{1}"...'.format(x["name"],x["pin"]))
-        h, t = getSensorData(x["pin"],x["model"]) 
+        h, t = getSensorData(x["handler"]) 
         if h is not None and t is not None:
 
          with open(x["output"]+".t", "a") as myfile:
@@ -180,7 +196,8 @@ def main(configfile):
           myfile.write("\n"+str(ts)+" "+str(t)+" "+str(h))
           myfile.close()
 
-        latestCached.append({'name': x["name"],'temperature':t,'humidity':h})
+         latestCached.append({'name': x["name"],'temperature':t,'humidity':h})
+        
         time.sleep(configuration["interval"]) 
 
 
@@ -232,4 +249,6 @@ if __name__ == '__main__':
     args = parse_args()
     main(configfile=args.configfile)
 
+
+''' BUGGY  https://github.com/adafruit/Adafruit_CircuitPython_DHT/issues/33 '''
 
