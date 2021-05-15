@@ -7,8 +7,18 @@ foo=$(cat <<EOF
 EOF
 )
 
+clear=$(cat <<EOF
+{
+  "command":"clear",
+  "priority":50,
+}
+EOF
+)
+
+
 echo "Source select $prio.."
 echo $foo
+curl -i -H "Content-Type: application/json" -X POST -d "$clear" http://$HOSTHYP:$PORTHYP/json-rpc
 curl -i -H "Content-Type: application/json" -X POST -d "$foo" http://$HOSTHYP:$PORTHYP/json-rpc
 
 
