@@ -55,3 +55,6 @@
 [submodule "arduino/DFRobotDFPlayerMini"]
 	path = arduino/DFRobotDFPlayerMini
 	url = https://github.com/DFRobot/DFRobotDFPlayerMini.git
+[submodule "arduino/MH-Z-CO2-Sensors"]
+	path = arduino/MH-Z-CO2-Sensors
+	url = https://github.com/julianes10/MH-Z-CO2-Sensors.git
